@@ -1,0 +1,1552 @@
+Real Algebraic Numbers:
+Complexity Analysis and Experimentation
+Ioannis Z. Emiris1 , Bernard Mourrain2 , and Elias P. Tsigaridas1
+1
+
+Department of Informatics and Telecommunications
+National Kapodistrian University of Athens, HELLAS
+{emiris,et}@di.uoa.gr
+2
+GALAAD, INRIA
+Sophia-Antipolis, FRANCE
+mourrain@sophia.inria.fr
+
+Abstract. We present algorithmic, complexity and implementation results concerning real root isolation of a polynomial of degree d, with
+integer coefficients of bit size ≤ τ , using Sturm (-Habicht) sequences and
+the Bernstein subdivision solver. In particular, we unify and simplify the
+analysis of both methods and we give an asymptotic complexity bound of
+eB (d4 τ 2 ). This matches the best known bounds for binary subdivision
+O
+solvers. Moreover, we generalize this to cover the non square-free polynomials and show that within the same complexity we can also compute the
+multiplicities of the roots. We also consider algorithms for sign evaluation, comparison of real algebraic numbers and simultaneous inequalities,
+and we improve the known bounds at least by a factor of d.
+Finally, we present our C++ implementation in synaps and some preliminary experiments on various data sets.
+
+1
+
+Introduction
+
+The representation and manipulation of shapes is important in many applications, e.g. CAGD, non linear computational geometry, robotics and molecular
+biology. The usual underlying models for these shapes are parametrized patches
+of rational surfaces, BSplines, natural quadrics and implicit algebraic curves or
+surfaces. Geometric processing on these objects, e.g. computing boundary representations [8], arrangements [18,38], Voronoi diagram of curved objects [21],
+requires the intensive use of polynomial solvers and computations with algebraic
+numbers. In such applications, a geometric model may involve several thousands
+of algebraic primitives. Their manipulations involve the computation of intersection points, of predicates on these intersection points (such as the comparison of
+coordinates), of the sign of polynomial expressions at these points (such as the
+sign of a polynomial which defines the boundary of an object). The coordinates
+of these intersection points, which are the solutions of polynomial equations, are
+real algebraic numbers that we need to manipulate efficiently.
+The objective of this paper is to give an overview of effective computations
+with real algebraic numbers, which unify, simplify and improve previous ap-
+
+proaches. We will tackle both complexity analysis and practical issues. We consider two algorithms for real root isolation of univariate integer polynomials, one
+based on Sturm sequences and one based on Descartes’ rule of sign and we will
+put both under the general concept of a subdivision solver. We will also analyse
+algorithms for sign evaluation, comparison of real algebraic numbers and the
+problem of simultaneous inequalities.
+Our aim is to provide better insights on these algorithms and better bounds
+on their complexity. For the analysis we consider the bit complexity model which
+is more realistic than the arithmetic one in the problems we are interested in.
+Our algorithms are essentially output sensitive, since they depend not only on
+the input bit size, but also on the actual separation bound, as we will see.
+eB -notation
+Notation. In what follows OB means bit complexity and the O
+means that we are ignoring logarithmic factors. For a polynomial f ∈ Z[X],
+deg (f ) denotes its degree. By L (f ) we denote an upper bound on the bit size
+of the coefficients of f (including a bit for the sign). For a ∈ Q, L (a) is the maximum bit size of the numerator and the denominator. Let M (τ ) denote the bit
+complexity of multiplying two integers of bit size at most τ and M (d, τ ) denote
+the bit complexity of multiplying two univariate polynomials of degrees bounded
+by d and coefficient bit size at most τ . Using FFT, M (τ ) = OB (τ logc1 τ ) and
+M (d, τ ) = OB (dτ logc2 (dτ )) for suitable constants c1 , c2 .
+Prior works. Various algorithms exist for polynomial real root isolation, but
+most of them focus on square-free polynomials. There is a huge bibliography on
+the problem and the references cited in this paper are only the tip of the iceberg
+of the existing bibliography.
+Collins and Akritas [10] introduced a subdivision-based real root isolation
+algorithm that relies on Descartes’ rule of sign (we call it Descartes solver from
+eB (d6 τ 2 ). Johnson [27] improved the bound
+now on) and derived a bound of O
+5 2
+e
+to OB (d τ ) without using fast Taylor shifts [48], whereas a gap in his proof
+was corrected by Krandick [29]. The latter also presented a different way of
+traversing the subdivision tree. Rouillier and Zimmermann (c.f. [43] and references therein) presented a unified approach with optimal memory management
+for various variants of the Descartes solver.
+An algorithm (we call it Bernstein solver from now on) that is based on
+a combination of Descartes’ rule and on the properties of the Bernstein basis
+was first introduced by Lane and Riesenfeld [31] and a bound on its complexity
+was first obtained by Mourrain et al [39]. The interested reader may also refer
+to Mourrain et al [37] for a variant with optimal memory management and
+the connection to Descartes solver. In the same context, Eigenwillig et al [15]
+proposed a randomized algorithm for square-free polynomials with bit stream
+eB (d6 τ 2 ).
+coefficients. The complexity of all these algorithms was bounded by O
+Recently, it was proven that the number of steps of both Descartes and Bernstein
+eB (dτ ) [16,46], which is the crucial step for obtaining a O
+eB (d4 τ 2 ) bound
+solver is O
+for both solvers [16], provided the polynomials are square-free.
+2
+
+Another algorithm, also based on Descartes’ rule of sign but which does not
+rely on subdivision schemes, is the CF algorithm [1,47]. It exploits the continued
+fraction expansion of the real roots of a polynomial in order to isolate them. The
+eB (d4 τ 2 ) [47].
+expected bit complexity of this algorithm is O
+If we restrict ourselves to real root isolation using Sturm (or Sturm-Habicht)
+sequences (we call it Sturm solver from now on) the first complete complexity
+analysis is probably due to Heindel [26]; see also [11], who obtained a complexity
+eB (d7 τ 3 ). Du et al [14], giving an amortized-like argument for the number of
+of O
+eB (d4 τ 2 ), for square-free polynomials.
+subdivisions, obtained a complexity of O
+Another family of solvers (that we call numerical), compute an approximation
+of all the roots (real and complex) of a polynomial up to a desired accuracy (see
+e.g. [45,40]). They are based on the construction of balanced splitting circles in
+eB (d3 τ ), if
+the complex plane and achieve the quasi-optimal complexity bound O
+we want to isolate the roots. However, performance in practice does not always
+agree with that predicted by asymptotic analysis. Let us also mention the Aberth
+solver [5,6], which has unknown (bit) complexity, but is very efficient in practice.
+For sign evaluation and comparison as well as computations with real algebraic numbers the reader may refer to [42]. In [19] for degree ≤ 4, it is proved
+eB (τ ). For the problem
+that these operations can be performed in O(1), or O
+of simultaneous inequalities (SI), we are interested in computing the (number
+of) real roots of a polynomial f , such that n other polynomials achieve specific
+sign conditions, where the degree of all the polynomials is bounded by d and
+their bit size by τ . Ben-Or, Kozen and Reif [3] presented the BKR algorithm
+for SI and Canny [7] improved it in the univariate case (by a factor) achieving
+O(n(m d log(m) log2 (d)+m2.376 )) arithmetic complexity, where m is the number
+of real roots of f . Coste and Roy [12] introduced Thom’s encoding for the real
+roots of a polynomial and SI in this encoding (see also [44]). Their approach is
+purely symbolic and works over arbitrary real closed fields. They state a complexeB (N 8 ), using fast multiplication algorithms but not fast computations
+ity of O
+and evaluation of polynomial sequences, where N ≥ n, d, τ . Basu, Pollack and
+Roy [2] presented an algorithm for SI where the real algebraic numbers are in
+eB (nd6 τ 2 ) or O
+eB (N 9 ), that
+isolating interval representation, with complexity O
+uses repeated refinements of the isolating intervals and does not assume fast
+multiplication algorithms.
+Results. For the problem of real root isolation of a univariate polynomial, we
+consider the general concept of a subdivision solver, Fig. 1, that mimics the
+binary search algorithm. The Sturm and Bernstein solvers count differently the
+number of real roots of a polynomial in an interval; see Cor. 2.1 and Prop. 3.1,
+respectively. Moreover, the Sturm solver counts exactly the number of real roots
+while the Bernstein solver provides an overestimation. However, exploiting the
+fact that Descartes’ rule of sign (Prop. 3.1) can not overestimate the number
+of real roots by more than the degree of the polynomial, both solvers can be
+put under the general concept of the subdivision solver of Fig. 1. With exactly
+the same arguments we can prove that they perform the same number of steps.
+3
+
+The analysis that we present, Prop. 5.2, unifies and simplifies significantly the
+previous approaches and applies as is to the Descartes solver, as well.
+eB (d4 τ 2 ),
+For the Sturm solver we present an algorithm with complexity O
+that improves the result of Du et al [14], see also [13], by extending it to non
+square-free polynomials. We simplify significantly the proof (Th. 5.1) and unify
+it with the Bernstein approach. We also show that computing the multiplicities
+of the roots can be achieved within the same complexity bound.
+For the Bernstein solver, we simplify the proof of Eigenwillig et al [16,46]
+for the number of subdivisions by considering the subdivision tree at an earlier
+level and by using Th. 4.1 exactly as stated in [27,30]. Thus, we arrive at the
+same bound for the Bernstein subdivision method (Th. 5.1) as in [16], but for
+polynomials which are not necessarily square-free.
+Real root isolation is an important ingredient for the construction of algebraic numbers represented in isolating interval representation, see Def. 6.1.
+We analyze the complexity of comparison, sign evaluation and simultaneous inequalities (Sec. 6). Even though the algorithms for these operations are not new
+[2,19,42,51], the results from real solving and optimal algorithms for polynomial
+remainder sequences, allow us to improve the complexity of all the algorithms,
+at least by a factor of d (Cor. 6.1, 6.2). For SI we prove a bound (Cor. 6.3) of
+eB (d4 τ max{n, τ }).
+O
+
+These algebraic operations ought to have efficient and generic implementations so that they can be used by other scientific communities. We present
+a package of synaps [36] that provides these functionalities on real algebraic
+numbers and exploits various algorithmic and implementation techniques. Experimental results (Sec. 7) illustrate the advantages of the software and our
+implementation of various algorithms for real root isolation.
+Our results extend directly to the bivariate case, i.e. real solving a polynomial
+system, sign evaluation of a bivariate polynomial evaluated over two algebraic
+numbers and SI in two variables. However, due to reasons of space, we cannot
+present these results here. The reader may refer to [22,20].
+
+Outline. In Sec. 2, we recall the main ingredients of the Sturm solver and analyse them in detail. Sec. 3 presents the ingredients of the Bernstein solver and
+their complexity. In Sec. 4, we present the general scheme for two subdivision
+algorithms based on Sturm-Habicht sequences and on the Bernstein basis representation, for real root isolation and computation of the multiplicities. The
+following section is devoted to the complexity analysis of both methods. Sec. 6
+is devoted to operations with real algebraic numbers, i.e. comparison, sign evaluation and SI. Sec. 7 illustrates our implementation in synaps and experiments
+concerning real root isolation on various data sets. Finally, we sketch our current
+and future work in Sec. 8.
+4
+
+2
+
+Preliminaries for Sturm–Habicht Sequences
+
+We recall here the main ingredients related to Sturm(-Habicht) sequences computations and
+Pptheir bit complexity.
+Pq
+Let f = k=0 fk xk , g = k=0 gk xk ∈ Z[x] where deg(f ) = p ≥ q = deg(g)
+and L (f ) = L (g) = τ . We denote by rem (f, g) and quo (f, g) the remainder and
+the quotient, respectively, of the Euclidean division of f by g, in Q[x].
+Definition 2.1. [32] The signed polynomial remainder sequence of f and g,
+denoted by SPRS (f, g), is the polynomial sequence
+R0 = f, R1 = g, R2 = − rem (f, g) , . . . , Rk = − rem (Rk−2 , Rk−1 ) ,
+with k the minimum index such that rem (Rk−1 , Rk ) = 0. The quotient sequence
+of f and g is the polynomial sequence {Qi }0≤i≤k−1 , where Qi = quo (Ri , Ri+1 )
+and the quotient boot is (Q0 , Q1 , . . . , Qk−1 , Rk ).
+There is a huge bibliography on signed polynomial remainder sequences
+(c.f. [2,49,51] and references therein). Gathen and Lucking [50] presented a unified approach to subresultants, while El Kahoui [17] studied the subresultants
+in arbitrary commutative rings. For the Sturm-Habicht (or Sylvester-Habicht)
+sequences the reader may refer to González-Vega et al [24], see also [2,32,33].
+In this paper we consider the Sturm-Habicht sequence of f and g, i.e. StHa(f, g),
+which contains polynomials proportional to the polynomials in SPRS (f, g).
+Sturm-Habicht sequences achieve better bounds on the bit size of the coefficients.
+Let Mj be the matrix which has as rows the coefficient vectors of the polynomials f xq−1−j , f xq−2−j , . . . , f x, f , g, gx, . . . , gxp−2−j , gxp−1−j with respect
+to the monomial basis xp+q−1−j , xp+q−2−j , . . . , x, 1. The dimension of Mj is
+(p + q − 2j) × (p + q − j). For l = 0, . . . , p + q − 1 − j let Mjl be the square matrix
+of dimension (p + q − 2j) × (p + q − 2j) obtained by taking the first p + q − 1 − 2j
+columns and the l + (p + q − 2j) column of Mj .
+Definition 2.2. The Sturm-Habicht sequence of f and g, is the sequence
+StHa(f, g) = (Hp = Hp (f, g), . . . , H0 = H0 (f, g)),
+Pj
+where Hp = f , Hp−1 = g, Hj = δj l=0 det (Mjl )xl and δj = (−1)(p+q−j)(p+q−j−1)/2 .
+The sequence of principal Sturm-Habicht coefficients (hp = hp (f, g), . . . , h0 (f, g))
+is defined as hp = 1 and hj is the coefficient of xj in the polynomial Hj , for
+0 ≤ j ≤ p. When hj = 0 for some j then the sequence is called defective,
+otherwise non-defective.
+If StHa(f, g) is non-defective then it coincides up to sign with the classical
+subresultant sequence introduced by Collins [9], see also [51]. However, in the
+defective case, one can have better control on the bit size of the coefficients in
+the sequence, see e.g. [32,33].
+5
+
+Theorem 2.1. [2,41,33,49] There is an algorithm that computes StHa(f, g) in
+eB (p2 qτ ). Moreover, L (Hj (f, g)) = O(pτ ).
+OB (pq M (pτ )), or O
+
+Let the quotient boot that corresponds to StHa(f, g), be StHaQ(f, g) =
+(Q0 , Q1 , . . . , Qk−1 , Hk ). The number of coefficients in StHaQ(f, g) is O(q) and
+their bit size is O(pτ ) [2,41].
+Theorem 2.2. [2,32,41,49] The quotient boot, the resultant and the gcd of f
+eB (p q τ ).
+and g, can be computed in OB (q log(q) M (pτ )) or O
+
+Theorem 2.3. [32,41] There is an algorithm that computes the evaluation of
+StHa(f, g) over a number a, where a ∈ Q ∪ {±∞} and L (a) = σ with complexity OB (q log(q) M (max{pτ, qσ})) or OB (qM (max (pτ, qσ))) if StHaQ(f, g)
+eB (q max{pτ, qσ}).
+is already computed. In both cases the complexity is O
+
+In many cases, e.g. real root isolation, sign evaluation, comparison of real
+′
+algebraic numbers, we need the evaluation of StHa(f, f ) over a rational number
+of bit size O(pτ ). If we perform the evaluation by Horner’s rule then for every
+polynomial in sequence, we must perform Ω(p) multiplications between numbers
+of bit size O(pτ ) and O(p2 τ ), thus the overall complexity is OB (p3 M (pτ )).
+′
+However, when we compute the complete StHa(f, f ) in OB (p2 M (pτ )) (Th. 2.1),
+the quotient boot is computed implicitly [41,2]. Thus, we can use the quotient
+boot in order to perform the evaluation even if we have already computed all the
+polynomials in the sequence. Notice also that the computation should be started
+by the last element of the quotient boot so as to avoid the costly evaluation of
+the first two polynomials in the sequence using Horner’s scheme.
+Even though this approach is optimal, it involves big constants in its complexity, thus it is not efficient in practice when the length of the sequence is not
+sufficiently big or when the sequence is defective, see e.g. [13]. Moreover, special
+techniques should be used for its implementation to avoid costly operations with
+rational numbers. So, as it is always the case with optimal algebraic algorithms,
+the implementation is far from a trivial task.
+Theorem 2.4. [2] The square-free part of f , i.e. fred , can be computed from
+′
+eB (p2 τ ), and L (fred ) = O(p + τ ).
+StHa(f, f ), in OB (p log(p) M (pτ )) or O
+
+Let W(f,g) (a) denote the number of modified sign changes of the evaluation of
+StHa(f, g) over a. Notice that W(f,g) (a) does not refer to the usual counting of
+sign variations, since special care should be taken for the presence of consecutive
+zeros [2,24,32].
+Theorem 2.5. [2,51,42] Let f, g ∈ Z[x] be relatively prime polynomials, where
+′
+f is square-free and f is the derivative of f and its leading coefficient fd > 0.
+If a < b are both non-roots
+γ ranges over the roots of f in (a, b), then
+P of f and
+′
+W(f,g) (a) − W(f,g) (b) = γ sign (f (γ)g(γ)).
+′
+
+′
+
+Corollary 2.1. If g = f then StHa(f, f ) is a Sturm sequence and Th. 2.5
+counts the number of distinct real roots of f in (a, b).
+
+For the Sturm solver V (f, [a, b]) will denote V (f, [a, b]) = W(f,f ′ ) (a)−W(f,f ′ ) (b).
+6
+
+3
+
+Preliminaries for the Bernstein Basis Representation
+
+In this section we present the main ingredients needed for the representation of
+polynomials in the Bernstein basis.
+Let R[x]d be the set of real polynomials of degree d. For a < b ∈ R, we denote
+¡ ¢
+i
+(b−x)d−i
+(i = 0, . . . , d) the Bernstein basis of R[x]d on
+by Bdi (x; a, b) = di (x−a)(b−a)
+d
+an interval [a, b].
+Pd
+For any polynomial f = i=0 bi Bdi (x; a, b) ∈ R[x]d represented in the Bernstein basis, the coefficients b = (bi )i=0,...,d are called control coefficients of f .
+We denote by V (f, [a, b]) ≡ V (b), the number of sign changes in this sequence
+b (after removing zero coefficients).
+The following theorem, which is a direct consequence of Descartes’ rule, allows us to bound the number of real roots of f on the interval [a, b]
+Proposition 3.1. [2] The number N of real roots of f on (a, b) is bounded by
+V (f, [a, b]). Moreover N ≡ V (f, [a, b]) mod 2.
+
+Given a polynomial f represented in the Bernstein basis on an interval [a, b],
+de Casteljau’s algorithm (see e.g. [2,37]), allows us to compute its representation
+in the Bernstein bases on the two sub-intervals, IL = [a, (1 − t)a + tb] and
+IR = [(1 − t)a + tb, b], where 0 ≤ t ≤ 1. Namely, bL = (bi0 )i=0,...,d (resp.
+bR = (bid−i )i=0,...,d ) are the control coefficients of f on IL (resp. IR ), where
+b0i = bi , i = 0, . . . , d, and
+bri = (1 − t) br−1
++ t br−1
+i
+i+1 (t),
+
+0 ≤ i ≤ d − r, 0 ≤ r ≤ d.
+
+(1)
+
+In order to analyse the complexity of the de Casteljau algorithm we recall
+some polynomial transformations related to the Bernstein representation, see
+[37] for more details. Let R[x, y][d] be the set of homogeneous polynomials of
+degree d in (x, y). For any f ∈ R[x]d , we denote by f the homogenisation of f
+in degree d. For λ 6= 0, µ ∈ R, consider the following maps, R2 → R2 :
+– ρ : (x, y) 7→ (y, x),
+– Hλ : (x, y) 7→ (λx, y), Hλ′ : (x, y) 7→ (x, λy),
+– Tµ : (x, y) 7→ (x − µy, y), Tµ′ : (x, y) 7→ (x, y − µx).
+The composition of the previous maps with f induces invertible transformations on the set of polynomials of degree d. The corresponding maps for nonhomogeneous polynomials, which we denote using the same names, are: ∀f ∈
+R[x]d , ρ(f ) = xd f (1/x), Hλ (f ) = f (λx), Hλ′ (f ) = f (λ−1 x), Tµ (f ) = f (x − µ)
+x
+and Tµ′ (f ) = (1 − µ x)d f ( 1−µ
+x ).
+Pd
+For any polynomial, f (x) = i=0 bi Bdi (x; a, b), we have
+ρ ◦ T1 ◦ ρ ◦ Hb−a ◦ T−a (f ) =
+
+d µ ¶
+X
+d
+bi xi .
+i
+i=0
+
+Now consider another interval [c, e]. The representation of f in the Bernstein
+Pd
+basis on [c, e] is f (x) = i=0 b′i Bdi (x; c, e). The map which transforms f from
+7
+
+its Bernstein representation on [a, b] to its Bernstein representation on [c, e], i.e.
+Pd ¡ ¢
+Pd ¡ ¢
+from i=0 di bi xi to i=0 di b′i xi is
+′
+′
+1 ◦ ρ ◦ T−1 ◦ ρ = T ◦ He−c ◦ Ta−c ◦ H 1 ◦ T
+ρ ◦ T1 ◦ ρ ◦ He−c ◦ T−c ◦ Ta ◦ H b−a
+1
+−1 . (2)
+b−a
+
+If we consider [a, b] = [0, 1] and [c, e] = [0, 12 ] then map (2) becomes: ρ ◦ T−1 ◦
+ρ ◦ H 12 ◦ ρ ◦ T1 ◦ ρ. And after simplifications, we obtain
+y y
+∆L : f 7→ f (x + , ) = f ◦ T−1 ◦ H ′1 .
+2
+2 2
+
+(3)
+
+If we consider the symmetric case, i.e. [a, b] = [0, 1] and [c, e] = [ 21 , 1], then
+map (2) becomes: ρ ◦ T−1 ◦ ρ ◦ H 12 ◦ T− 12 ◦ ρ ◦ T1 ◦ ρ. It corresponds to the following
+map on the homogeneous polynomials:
+x x
+′
+◦ H 12 .
+∆R : f 7→ f ( , + y) = f ◦ T−1
+2 2
+In both cases, multiplication by 2d yields the maps
+∆R : f 7→ f (x, x + 2 y)
+
+and
+
+∆L : f 7→ f (2 x + y, y),
+
+(4)
+
+that operate operate on polynomials with integer coefficients.
+Proposition 3.2. Let (bi )i=0,...,d ∈ Zd+1 be the coefficients of a polynomial f
+in the Bernstein basis on the interval [a, b], and let ν be a bound on the bit size
+of coefficients. The complexity of computing the Bernstein coefficients of f on
+a+b
+e
+the two sub-intervals [a, a+b
+2 ] and [ 2 , b] is bounded by OB (d(d + ν)) and their
+bit size is bounded by d + ν.
+Proof. Using the de Casteljau scheme, Eq. (1) using t = 21 , we prove by induction
+(br−1 +br−1 )
+
+b
+
+r
+
+r
+
+that the coefficients bri = i 2 i+1 are of the form 2ii , where bi ∈ Z is of bit
+size ≤ ν +r. Reducing to the same denominator 2d , we obtain integer coefficients
+of bit size ≤ ν + d.
+¡ ¢
+We denote by ν ′ the bit size of the coefficients ( di bi )i=0,...,d where (bi )i=0,...,d
+are the coefficients of f in the Bernstein basis (Bdi (x; a, b))i=0,...,d . Notice that
+ν ′ ≤ ν + d.
+a+b
+In order to compute the coefficients of f on [a, a+b
+2 ] and [ 2 , b], we apply
+the same operations as when we compute the coefficients of a polynomial in the
+Bernstein basis on [0, 21 ] and [ 12 , 1], given its coefficients in the Bernstein basis
+on [0, 1].
+According to (3), applying de Casteljau’s algorithm corresponds first to multiply by the binomial coefficients, then to shift, y 7→ x + y, then to scale one
+variable of the homogeneous polynomial f by 12 , and finally to divide by the
+binomial coefficients3 .
+3
+
+There is no need for the division step if we have to apply repeatedly the shift operation.
+
+8
+
+Since the bit size of the binomial coefficients is bounded by d (their sum is
+eB (d(ν + d)). Shifting by 1 a
+2 ), multiplying the bi by them costs at most O
+eB (d(d +
+polynomial of degree d with coefficients of bit size ≤ ν + d requires O
+ν)) bit operations [49,48] and the resulting polynomial has (coefficient) bit size
+O(ν + d). Consequently, scaling the variable of the (resulting) polynomial by 12
+eB (d(ν + d)).
+and computing the quotient by the binomial coefficients costs O
+Therefore, the complexity of computing the Bernstein coefficients of f on the
+e
+sub-interval [a, a+b
+2 ] is bounded by OB (d(ν + d)). By symmetry, inverting the
+order of the coefficients of f , we obtain the same bound for the coefficients of f
+on [ a+b
+⊓
+⊔
+2 , b], which ends the proof.
+d
+
+4
+
+Subdivision Solver
+
+Pd
+Let f = i=0 ai xi ∈ Z[x], such that deg(f ) = d and L (f ) = τ , and let fred
+be its square-free part. We want to isolate the real roots of f , i.e. to compute
+intervals with rational endpoints that contain one and only one root of f , as well
+as the multiplicity of every real root.
+In Fig. 1, we present the general scheme of the subdivision solver that we
+consider, augmented appropriately so that it also outputs the multiplicities. It
+uses an external function V (f, I), which bounds the number of roots of f in
+the interval I. A real root isolation algorithm can be put under the subdivision
+solver concept of Fig. 1 if it can provide the V (f, I) function. In the case of the
+Sturm solver, V (f, I) returns the exact number (counted without multiplicities)
+of the real roots of f in I (Cor. 2.1). In the case of Bernstein solver, V (f, I) is
+equal to the number of real roots of f in I (counted with multiplicities) modulo
+2 (Prop. 3.1).
+Separation bounds. An important quantity for the analysis of the subdivision solvers is a bound on the minimal distance, sep(f ), between the roots of
+a univariate polynomial f (also called separation bound), or more generally on
+the product of distances between roots. We recall here classical results, slightly
+adapted to our context. For the separation bound it is known, e.g. [2,34,51], that
+1−d
+d+2
+sep(f ) ≥ d− 2 (d + 1) 2 2τ (1−d) , thus log(sep(f )) = O(dτ ). The latter provides
+a bound on the bit size of the endpoints of the isolating intervals.
+Recall, that Mahler’s measure, see e.g. [34,51,2], of a polynomial f is M(f ) =
+Qd
+|ad | i=1 max{1, |γi |}, where ad is√the leading coefficient and γi are all the roots
+of f . We know that M(f ) < 2τ d + 1 [2,34]. Thus, the following inequality
+[2,34] holds:
+√
+M(fred ) ≤ M(f ) < 2τ d + 1.
+(5)
+For the minimum distance between two consecutive real roots of a squarefree polynomial, Davenport-Mahler bound is known [13] (see also [27,30]). The
+conditions for this bound to hold were generalized by Du et al [14]. A similar
+bound, with less strict hypotheses, also appeared in [35]. Using (5) we can provide
+a bound similar to [27] for non square-free polynomials.
+9
+
+ALGORITHM: Real Root Isolation
+Input: A polynomial f ∈ Z[x], such that deg(f ) = d and
+L (f ) = τ .
+Output: A list of intervals with rational endpoints, which
+contain one and only one real root of f and the multiplicity
+of every real root.
+1. Compute the square-free part of f , i.e. fred
+2. Compute an interval I0 = (−B, B) with rational endpoints
+that contains all the real roots. Initialize a queue Q with I0 .
+3. While Q is not empty do
+a) Pop an interval I from Q and compute v := V (f, I).
+b) If v = 0, discard I.
+c) If v = 1, output I.
+d) If v ≥ 2, split I into IL and IR and push them to Q.
+4. Determine the multiplicities of the real roots, using the
+square-free factorization of f .
+
+Fig. 1. Real root isolation subdivision algorithm
+Theorem 4.1 (Davenport-Mahler bound revisited). Let A = {α1 , . . . , αk }
+and B = {β1 , . . . , βk } be subsets of distinct (complex) roots of f (not necessarily
+square-free) such that βi ∈
+/ {α1 , . . . , αi } and |βi | ≤ |αi |, for all i ∈ {1, . . . , k}.
+Then
+√
+k
+Y
+3 k
+−d+1 − d
+2
+) .
+|αi − βi | ≥ M(f )
+d (
+d
+i=1
+The bound also holds when α1 > β1 = α2 > β2 = . . . αk > βk := αk+1 , are
+distinct real roots of f .
+⊓
+⊔
+
+Proof. Use [27] and (5).
+
+5
+
+Complexity Analysis of Real Root Isolation
+
+In this section, we bound the number of bit operations for isolating the real roots
+of a polynomial using the Sturm and the Bernstein solver. In what follows we
+present in detail the complexity of each step of the subdivision algorithm (see
+Fig. 1).
+We consider the tree associated with a run of the subdivision algorithm on a
+polynomial f . Each node represents an interval. The root of the tree corresponds
+to the initial interval I0 = [a, b]. The algorithm splits every interval which is
+not a leaf of the tree to two equal sub-intervals. The depth of a node of the
+tree (associated with an interval I) is log2 (|I0 |/|I|). This is also the number
+of subdivisions performed to obtain the sub-interval I from I0 . The number
+of steps (subdivisions) that the algorithm performs equals the total number of
+nodes of the subdivision tree, or in other words equals the number of intervals
+10
+
+(sub-intervals of I0 ) that are tested. Notice that the arguments are independent
+of the subdivision solver, Sturm or Bernstein in this paper, that we use.
+5.1
+
+Square-Free Factorisation [step 1]
+
+eB (d2 τ ) (Th. 2.4). Notice that L (fred ) =
+The computation of fred can be done in O
+O(d+τ ). In order to simplify notation, we assume that d = O(τ ), thus L (fred ) =
+O(τ ). Notice also that after this computation, the Sturm-Habicht sequence
+StHa(f ) is available. We do not need the complete sequence but only the quoeB (d2 τ ) (Th. 2.2). However,
+tient boot, thus this computation can be done in O
+we may also assume that the complete sequence is computed, with complexity
+eB (d3 τ ) (Th. 2.1), since this step is not the bottleneck of the algorithm.
+O
+5.2
+
+Root Bounds and Initialization [step 2]
+
+The ³¯
+Cauchy¯ bound
+that if α is a real root of f then |α| ≤ B = 1 +
+¯ ¯states
+´
+¯
+¯
+¯ a0 ¯
+τ
+max ¯ ad−1
+,
+.
+.
+.
+,
+≤
+2
+. Various upper bounds are known for the absolute
+¯ ad ¯
+ad ¯
+
+value of the real roots [2,51,49]. However, asymptotically the bit size of all the
+bounds is the same, i.e. B ≤ 2τ . Thus, we can take I0 = [a, b], with a ≤ −2τ
+and b ≥ 2τ .
+For the Sturm solver, before starting the main loop, we may have to compute
+eB (d3 τ ) (Th. 2.1).
+the Sturm-Habicht sequence of f , which costs O
+For the Bernstein solver, we have to represent fred in the Bernstein basis
+on [a, b]. This can be done in O(d2 ) arithmetic operations and it produces coefficients of size O(d(d + τ )). The cost of this transformation is bounded by
+eB (d3 (d + τ )).
+O
+eB (d3 (d + τ )).
+In both methods, the initialization step can be done in O
+
+5.3
+
+Computing V (f, I) and Splitting [steps 3.a-d]
+
+Suppose that the algorithm is at depth h of the subdivision tree. The tested
+interval, say I, has endpoints of bit size bounded by τ + h, since each subdivision
+step increases the bit size by one.
+Using the Sturm solver, we compute V (f, I), Cor. 2.1, by evaluating StHa(f )
+eB (d2 (τ + h)) (Th. 2.3).
+over the endpoints of I. The cost of the evaluation is O
+Then we split I, i.e. compute the middle point of it, in OB (τ + h).
+Using the Bernstein solver, we compute V (f, I) by counting the number of
+sign variations in the control coefficients of f in I. This can be done in O(d)
+operations. We denote by τ0 = O(d(d + τ )) (Sec. 5.2) a bound on the bit size of
+the coefficients of f in the Bernstein basis on the interval I0 . By Prop. 3.2, since
+we performed h subdivisions so far, starting from a polynomial with coefficients
+of bit size τ0 , the coefficients of f on I are of bit size τ0 + dh and the complexity
+eB (d(d + τ0 + d h)) = O
+eB (d2 (d + τ + h)) (Sec.
+of the splitting operation is in O
+5.2).
+Consequently, for both solvers, steps 3.a-d can be performed with complexity
+eB (d2 (d + τ + h)).
+O
+11
+
+5.4
+
+Subdivision Tree Analysis [step 3]
+
+In this section, we analyse the total number of subdivisions.
+A bound on the number of the subdivision steps was derived in [30, Th. 5.5,
+5.6], where in Rem. 5.7 the authors state: “The theorem (5.6) implies the dominance relations hk ¹ n log (nd) and h ¹ n log (nd) which can be used in an
+asymptotic analysis of Algorithm 1 when the ring S of the coefficients is Z”,
+where k is the number of internal nodes of depth h in the recursion tree of the
+subdivision algorithm based on Descartes’ rule, n is the degree and d is the
+Euclidean norm of the polynomial. In [46, Th. 5], a O(dτ + d logd) bound is
+derived and, later on, [16] proved optimality under the mild assumption that
+τ = Ω(logd).
+Our arguments for bounding the number of the subdivision steps are a combination and/or simplification of the arguments in [30,14,46]. Our proof (prop. 5.2)
+is simpler than the one in [16,46] since the handling of the subdivision tree stops
+at an earlier level and we use Th. 4.1 (as stated in [27] and [30]) without any
+modifications. We also simplify substantially the proof of [14], for Sturm solver.
+We denote by I the set of intervals which are the parents of two leaves in the
+subdivision tree in Sturm (resp. Bernstein) solver. By construction, for I ∈ I,
+V (f, I) ≥ 2 but for the two sub-intervals IL , IR of I, V (f, IL ) and V (f, IR ) are
+in {0, 1}, since these intervals are leaves of the subdivision tree. Moreover, for
+the Sturm solver, it holds that V (f, I) = 2 and V (f, IL ) = V (f, IR ) = 1.
+Notice that |I| is less than V (f, I0 ), since at each subdivision the sum of the
+variations of f on all the intervals cannot increase, for both methods (see [39,37]
+for the Bernstein solver). In particular, we have |I| ≤ d.
+Let αI (or βI ) be a, possibly complex, root of f whose real part is in I.
+Proposition 5.1. If I ∈ I then there exist two distinct (complex) roots αI 6= βI
+of f such that |αI − βI | < 2|I|.
+Proof. Consider an interval I ∈ I which contains two leaves IL , IR of the subdivision tree. We have the following possibilities for the sign variation of f on the
+two sub-intervals IL , IR :
+(1, 1) : for both solvers, there are two distinct real roots α ∈ IL , β ∈ IR in I and
+|α − β| ≤ |I|. This is the only case, which can happen in Sturm’s solver.
+(0, 0) : this may happen only in the Bernstein solver. Since the sign variations
+are V (f, I) ≥ 2, the first circle theorem [37,2,30] implies that there exist two
+complex conjugate roots β, β in the disc D(m(I), |I|
+2 ). Therefore, |β−β| ≤ |I|.
+(1, 0) or (0, 1) : this may also happen only in the Bernstein solver. There is
+a real root α in I. Since V (f, I) ≥ 2, the second circle theorem [37,2,30]
+implies that there exists two complex conjugate roots β, β in the union of
+1
+i|I|, √13 |I|), which is contained in a disc of diameter
+the discs D(m(I) ± 2√
+3
+2 |I|. Therefore |β − α| < 2|I|.
+⊓
+⊔
+
+Thus the proposition holds.
+In addition, we can prove the following result.
+12
+
+αI
+
+αI ′
+1
+
+I
+
+βI ′
+I′
+
+βI
+
+Fig. 2. Two disjoint intervals I and I ′ and the accociated two circles to each of
+them.
+Lemma 5.1. Let {αI , βI } ∩ {αI ′ , βI ′ } 6= ∅, then I ∩ I ′ 6= ∅.
+Proof. For the Sturm solver, this property is clear since αI , βI ∈ I.
+Let us consider the Bernstein subdivision method. We suppose that I ∩I ′ = ∅.
+Without loss of generality, we can assume in the proof that I 6= I ′ , |I| ≥ |I ′ |,
+and that ∀x ∈ I, ∀y ∈ I ′ , x ≤ y.
+Since the intervals are obtained by binary subdivision, we can assume that
+the distance between I and I ′ is at least |I ′ |. Using scaling and translation, we
+can assume that the right endpoint of I is 0 and that I ′ = [1 + u, 2 + u] (u ≥ 0).
+The √tangents to the larger circles, containing I and the roots αI and βI at (0, 0),
+are 23 x ± y2 = 0 (see Fig. 2). We denote by RI the union of the corresponding
+discs, so that αI , βI ∈ RI .
+The center
+of the discs, whose √
+union RI ′ contains the roots αI ′ and βI ′ , are
+√
+( 32 + u, ± 63 ) and their radius is 33 (see Fig. 2). A direct computation of the
+distance between these centers and the two tangent lines shows that RI ∩RI ′ = ∅.
+Consequently, if I ∩ I ′ = ∅, then we conclude that {αI , βI } ∩ {αI ′ , βI ′ } = ∅. ⊓
+⊔
+Let us number the intervals of I in increasing order and denote by I ′ the
+subset with an even index and by I ′′ the subset with an odd index. By Lem. 5.1,
+the pairs {αI , βI } for I ∈ I ′ (resp. I ′′ ) are disjoint. Thus, by Th. 4.1 (exchanging
+the role of αI and βI if necessary), we have
+Y
+
+I∈J
+
+√ |J |
+d
+|αI − βI | ≥ M(f )−d+1 d− 2 −|J | 3 ,
+
+(6)
+
+for J = I ′ or J = I ′′ . This is the key argument for the following result:
+Proposition 5.2. The number of subdivisions in both methods is in O (dτ + d log(d)) .
+13
+
+Proof. The number N of subdivisions equals the number of internal nodes in the
+subdivision tree. It is less than the sum of the depth of I, for I ∈ I:
+P
+|b−a|
+N≤
+I∈I log |I| P
+≤ |I| log|b − a| − I∈IP
+log|I|
+≤ |I| log|b − a| + |I| − I∈I log|αI − βI | (Prop. 5.1).
+
+P
+By (6), we have − I∈I ′ log|αI − βI | ≤ (d − 1)log(M(f )) + ( d2 + |I ′ |)logd −
+√
+|I ′ |log 3. A similar bound applies for I ′′ .
+As we can take a = −2τ , b = 2τ (by Cauchy bound), logM(f ) ≤ τ +
+1
+′
+′′
+2 log(d + 1) (Eq. 5) and |I | + |I | = |I| ≤ d, the number of internal nodes,
+N , in the subdivision tree is bounded by
+P
+N < |I| + |I|log|b − a| − I∈I log|αI − βI |
+≤ d + d(τ + 1) + (d − 1)(2τ + log(d + 1)) + 2 d logd
+= O (dτ + d logd) .
+⊓
+⊔
+Remark 5.1. The constant in this bound on the number of subdivisions can be
+divided by 2, in Sturm method, by applying directly Th. 4.1 to αI , βI for I ∈ I.
+5.5
+
+Multiplicities [step 4]
+
+In order to compute the multiplicities of the roots, we compute the square-free
+factorization, i.e. a sequence of square-free coprime polynomials (g1 , g2 , . . . , gm )
+m
+and gm 6= 1. The algorithm of Yun [49] computes the
+with f = g1 g22 · · · gm
+eB (d2 τ ). To be more specific the cost is twice the
+square-free factorization in O
+′
+cost of the computation of StHa(f, f ) [23]. Moreover, deg(gi ) = δi ≤ d and
+L (gi ) = O(dτ ) by Mignotte’s bound [34], where 1 ≤ i ≤ m.
+At every isolating interval, one and only one gi must have opposite signs at
+its endpoints, since gi are square-free and pairwise coprime. If a gi changes sign
+at an interval then the multiplicity of the real root that the interval contains is
+eB (δ 2 dτ ), using Horner’s
+i. Each gi can be evaluated over an isolating point in O
+i
+rule. We can evaluate it over all the isolating points (there are at most d + 1),
+eB (δi d2 τ ) [49,51]. Since Pm δi ≤ d the overall cost is O
+eB (d3 τ ).
+in O
+i=1
+5.6
+
+Complexity of Real Root Isolation
+
+In this section we prove that the bit complexity bound for the two subdivision
+eB (d4 τ 2 ):
+solvers is O
+
+Theorem 5.1. Let f ∈ Z[x], with deg(f ) = d and L (f ) = τ , not necessarily
+square-free. We can isolate the real roots of f and determine their multiplicities
+eB (d4 τ 2 ). Moreover, the endpoints of the
+using Sturm or Bernstein solver in O
+isolating intervals have bit size bounded by O(d τ ).
+14
+
+Proof. In order to isolate the real roots of f , we first compute its square-free
+eB (d2 τ ) arithmetic operations and yields
+part (step 1). This can be done in O
+a polynomial fred , which coefficients are of bit size bounded by O(d + τ ) (see
+Sec. 5.1). This step is not necessary for the Sturm solver.
+eB (d3 (d + τ )) (Sec. 5.2).
+The initialisation step costs O
+Then we run the main loop of the subdivision algorithm. The cost of a subeB (d2 (d + τ + h)) (Sec. 5.3).
+division step at level h is O
+By Prop. 5.2, the number of subdivisions and the depth h of any node of the
+e τ ). Therefore, the overall complexity of both subdivision
+subdivision tree is O(d
+2
+e
+eB (d4 τ 2 ).
+solvers is OB (d (d + τ + d τ ) d τ ) = O
+⊓
+⊔
+Remark 5.2. In Sec. 5.1 we assumed that d = O(τ ). If we drop this assumpeB (d6 + d5 τ + d4 τ 2 ). If N =
+tion then the complexity of real root isolation is O
+eB (N 6 ).
+max{d, τ } then in both cases the complexity bound is O
+
+6
+
+Real Algebraic Numbers
+
+The real algebraic numbers, i.e. those real numbers that satisfy a polynomial
+equation with integer coefficients, form a real closed field denoted by Ralg = Q.
+From all integer polynomials that have an algebraic number α as root, the primitive one (the gcd of the coefficients is 1) with the minimum degree is called
+minimal. The minimal polynomial is unique (up to a sign), primitive and irreducible [51]. Since we use Sturm-Habicht sequences, it suffices to deal with
+algebraic numbers, as roots of any square-free polynomial and not as roots of
+their minimal ones. In order to represent a real algebraic number we choose the
+isolating interval representation.
+Definition 6.1. The isolating-interval representation of real algebraic number
+α ∈ Ralg is α ∼
+= (f (x), I), where f (x) ∈ Z[x] is square-free and f (α) = 0,
+I = [a, b], a, b, ∈ Q, α ∈ I and f has no other root in I.
+Using the results of Sec. 2 and 3 we can compute the isolating interval representation of all the real roots of a polynomial f , with deg(f ) = d and L (f ) = τ ,
+eB (d4 τ 2 ) and the endpoints of the isolating intervals have bit size O(dτ ).
+in O
+Comparison and sign evaluation. We can use Sturm-Habicht sequences in
+order to find the sign of a univariate polynomial, evaluated over a real algebraic
+number and to compare two algebraic numbers. We improve existing bounds by
+one factor.
+Corollary 6.1. Let g(x) ∈ Z[x], where deg(g) ≤ d and L (g) = τ , and a real
+eB (d3 τ ).
+algebraic number α ∼
+= (f, [a, b]). We can compute sign(g(α)) in O
+
+Proof. By Th. 2.5
+
+′
+
+W(f,g) (a) − W(f,g) (b) = sign(g(α)) · sign(f (α)),
+15
+
+and thus
+
+¡
+¢
+′
+sign(g(α)) = W(f,g) (a) − W(f,g) (b) · sign(f (α)).
+
+Thus we need to perform two evaluations of StHa(f, g) over the endpoints of
+eB (d3 τ ) (Th. 2.3). The
+the isolating interval of α. The complexity of each is O
+′
+sign of f (α) can be computed as
+′
+
+sign(f (α)) = sign(f (b)) − sign(f (a)).
+Notice that f (a)f (b) < 0, since γ is the unique real root of f in [a, b]. It reasonable to assume that the signs of f over the endpoints of the isolating interval are
+known. If this is not the case then we can evaluate f over them, using Horner’s
+eB (d3 τ ), since we need d multiplications of numbers of
+rule, with complexity O
+2
+bit size O(d τ ).
+eB (d3 τ ).
+We conclude that the overall complexity of the operation is O
+⊓
+⊔
+Corollary 6.2. We can compare two real algebraic numbers in isolating interval
+eB (d3 τ ).
+representation in O
+
+Proof. Let two algebraic numbers γ1 ∼
+= (f2 (x), I2 ) where
+= (f1 (x), I1 ) and γ2 ∼
+I1 = [a1 , b1 ], I2 = [a2 , b2 ]. Let J = I1 ∩ I2 . When J = ∅, or only one of γ1 and
+γ2 belong to J, we can easily order the 2 algebraic numbers. If γ1 , γ2 ∈ J, then
+′
+γ1 ≥ γ2 ⇔ f2 (γ1 ) · f2 (γ2 ) ≥ 0. We obtain the sign of f2 (γ2 ), using Cor. 6.1, thus
+eB (d3 τ ).
+the complexity of comparison is O
+⊓
+⊔
+Simultaneous inequalities Let f , A1 , . . . , An1 , B1 , . . . , Bn2 , C1 , . . . , Cn3 ∈
+Z[x], with degree bounded by d and coefficient bit size bounded by τ . We wish
+to compute the number of and the real roots, γ, of f such that Ai (γ) > 0,
+Bj (γ) < 0 and Ck (γ) = 0 and 1 ≤ i ≤ n1 , 1 ≤ j ≤ n2 , 1 ≤ k ≤ n3 . Let
+n = n1 + n2 + n3 .
+Corollary 6.3. There is an algorithm that solves the problem of simultaneous
+eB (d4 τ max{n, τ }).
+inequalities (SI) in O
+
+Proof. First we compute the isolating interval representation of all the real
+eB (d4 τ 2 ) (Th. 5.1). There are at most d. For every real root γ
+roots of f in O
+of f , for every polynomial Ai , Bj , Ck we compute sign (Ai (γ)), sign (Bj (γ)) and
+eB (d3 τ ) (Cor. 6.1) and in the worst case
+sign (Ck (γ)). Sign determination costs O
+eB (max{nd4 τ, d4 τ 2 }).
+we must compute n of them. Thus the overall cost is O
+This improves the known bounds by one or two factors in the bit complexity
+model.
+
+7
+
+Implementation and Experiments
+
+In this section, we describe the package for algebraic numbers available in the
+library synaps [36]. The purpose of this package is to provide a set of tools, for
+16
+
+the manipulation of algebraic numbers, needed in applications such as Geometric
+modeling, and non linear computational geometry. In the problems encountered
+in these domains, the degree of the involved polynomials is not necessarily very
+high (≤ 100), but geometric operations require an intensive use of algebraic
+solvers.
+For this reason, in this section we focus on univariate equations of small degree in opposition with the first sections, but the input bit size may be beyond
+machine precision. We analyse the behavior of our solvers, in this range of problems which appear in our geometric applications and for which the asymptotic
+bounds may not be pertinent indicators. We do not consider large degree problems, where memory management issues might influence the solving strategy.
+In synaps, there are several solver classes; their interface is as follows:
+template < class T > struct SOLVER {
+typedef NumberTraits<T>::RT
+RT;
+typedef NumberTraits<T>::FT
+FT;
+typedef NumberTraits<T>::FIT FIT;
+typedef UPolDse<T>
+typedef root_of<T, Poly>
+... };
+
+Poly;
+RO_t;
+
+where RT is the ring number type (typically Z), FT is the field number type
+(typically Q), FIT is the interval type, Poly is the univariate polynomial, RO t
+is the type for real algebraic numbers, etc.
+Algebraic numbers are of the form:
+template <class T, class UPOL=UPolDse<T> >
+struct root_of {
+NumberTraits<T>::Interval_t interval_;
+UPOL polynomial_;
+... };
+parametrized by the type of coefficients and univariate polynomials. This allows
+flexibility and an easy parametrisation of the code.
+In order to construct a real algebraic number the user may select from several
+different univariate solvers, that we are going to describe hereafter. The other
+functionalities that we provide are the comparison, bool compare(const RO t&
+a, const RO t& b) and the evaluation of signs int sign at(const Poly& P,
+const RO t& a), based on interval evaluation and if necessary on the computation of Sturm-Habicht sequences. This involves several additional functions for
+computing subresultant sequences with various methods (Euclidean, Subresultants, Sturm-Habicht, etc), for computing the GCD, the square-free part, etc.
+We also provide the four operations, i.e. {+, −, ∗, /}, of RO t with RT’s (integer
+type) and FT’s (rational type).
+Perhaps the most important operation is the construction of real algebraic
+numbers, i.e. real root isolation of univariate polynomials. Several subdivision
+17
+
+30
+
+D1
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+60
+
+80
+
+100
+
+degree
+
+50
+
+D1
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+degree
+
+Fig. 3. Random polynomials of bit size 30 (top) and 50 (bottom) bits.
+
+solvers have been tested for the construction of these algebraic numbers. We
+report here on the following solvers:
+(S1 ) solve( f,IslSturm<ZZ>());
+(S2 ) solve( f,IslBzInteger<QQ>());
+(S3 ) solve( f,IslBzBdgSturm<QQ>());
+These solvers take as input, polynomials with integer or rational coefficients
+and output intervals with rational endpoints. All use the same initial interval.
+S1 (IslSturmQQ in the plots) is based on the construction of the SturmHabicht sequence and subdivisions, using rational numbers or large integers
+provided by the library gmp.
+S2 (IslBzIntegerZZ in the plots) is an implementation of the Bernstein
+subdivision solver, using integer coefficients. The polynomial is converted to the
+Bernstein representation on the initial interval, using rational arithmetic. Then,
+the coefficients are reduced to the same denominator, and the numerators are
+18
+
+30
+
+D2
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+60
+
+80
+
+100
+
+degree
+
+50
+
+D2
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+degree
+
+Fig. 4. Random polynomials with multiple roots of bit size 30 (top) and 50
+(bottom) bits.
+
+taken. Finally, the integer version of de Casteljau’s algorithm, see Eq. (4), is
+applied at each subdivision step.
+S3 (IslBzBdgSturmQQ in the plots) is a combination of two solvers. In a first
+part, the polynomial is converted to the Bernstein representation on the initial
+interval, using rational arithmetic and its coefficients are rounded to double
+intervals. The Bernstein subdivision solver is applied on this interval representation and stops when it certifies the isolation of a root or when it is not possible
+to decide the existence and uniqueness of a root from the “sign” (−, +, ?) of the
+interval coefficients. In this case, in order to complete the isolation process, the
+solver S2 is used on the intervals which are suspect.
+We also compare with the time needed for computing the square-free factorization of the tested polynomial (SturmSeq in the plots). Our implementation is
+based on Yun’s algorithm and Sturm-Habicht sequences.
+19
+
+30
+
+D5
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+60
+
+80
+
+100
+
+degree
+
+50
+
+D5
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+degree
+
+Fig. 5. Mignotte polynomials of bit size 30 (top) and 50 (bottom) bits.
+
+We test against core [28] (CORE in the plots), and mpsolve, a numerical
+solver based on Aberth’s method [5] and implemented by G. Fiorentino and D.
+Bini [6] (SlvAberthQQ in the plots), that are open source tools with real solving
+capabilities. core implements the Sturm solver. In order to isolate the real
+roots of a polynomial first it computes its square-free part and then performs
+isolation. mpsolve implements an iterative method for approximating the roots
+of a polynomial and the implementation is based on multiprecision floats. We
+set the output precision of the algorithm to 30 digits. The code of mpsolve is
+integrated in synaps and called similarly to the other solver (S1 , S2 and S3 ), i.e
+solve( f, Aberth<RR>()).
+Other libraries such as [25], or Exacus with Leda [4], or RS [43], have not
+been tested, due to accessibility obstacles. Namely Leda is a commercial software
+and RS, neither open source, is accessible as a binary code through its maple
+(v. 9.5) interface, which we did not have at the time of the experiments. For
+20
+
+experiments against these libraries and the package of Rioboo [42] in Axiom,
+for degree ≤ 4, the reader may refer to [19].
+Our data are polynomials of degree d ∈ {5, . . . , 100} and coefficient bit size
+τ ∈ {10, 20, 30, 40, 50} with various attributes. Namely D1τ denotes random polynomials with few real roots and D2τ random polynomials with multiple real roots.
+D3τ denotes polynomials with d (multiple) integer real roots and D4τ polynomiτ
+als¡ with d (multiple)
+¢ rational real roots. Dτ5 denotes Mignotte polynomials, i.e.
+d
+2
+a x − 2(Kx − 1) , where K ∈ [5..30], D6 polynomials that are the product of
+two Mignotte polynomials and D7τ Mignotte polynomials with multiple roots.
+For reasons of space, we present timings, which are the average of 100 runs,
+only for D130 , D150 , D230 , D250 , D530 , D550 , D730 and D750 . The experiments were
+performed on an Pentium (2.6 GHz), using g++ 3.4.4 (Suse 10). We have to
+emphasize that we do not consider experimentation as a competition, but rather
+as a starting point for improving existing implementations.
+For polynomials with few, distinct and well separated real roots, this is the
+case for D1 and D2 (see Fig. 3 and 4), S1 is clearly the worst choice, since the
+huge time for the computation of the Sturm sequence dominates the time for its
+evaluation. In such data sets, S2 or even approximate solvers are the solvers of
+choice, since not much output precision is needed in order to isolate the roots.
+When there are roots that are very close and/or there are multiple roots, this
+is the case for D5 and D7 (see Fig. 5 and 6), then the computation time of the
+Sturm-Habicht sequence is negligible (for the experiments that we performed).
+In such cases a combined solver is the solver of choice, since it isolates the well
+separated roots and also provides good initial intervals for S2 , if needed. Special
+notice should be given to the bad behavior of the Bernstein solver (S2 ) in the
+presence of multiple roots. The expected similar asymptotic behavior of Sturm
+and Bernstein subdivision solvers can be guessed on these experimentations,
+though the degree is not very high (≤ 100). This applies in the worst case
+(Mignotte-like polynomials), whereas for random polynomials, the asymptotics
+of the two solvers seem to be different.
+We have to mention that CORE does not compute the multiplicities of the
+real roots. In addition, for the Aberth solver (SlvAberthQQ in the plots), even
+though we specified its parameters in order to search for real roots only and
+detect multiplicities, since it is a numerical solver it must be given an output
+precision. In order to be sure in advance that we isolate all real roots, the output
+precision should be equal to the (theoretical) separation bound. In almost all
+cases, mpsolve is the fastest implementation.
+For the exact solvers, we consider solver S3 , which is a combination of solvers,
+as the most promising option. It is the fastest on random instances and comparable to S2 on all other instances. However, more theoretical work is needed
+so that we can provide some guarantee for the approximations. Another important issue is the implementation of the square-free factorization, which seems
+to be the bottleneck for all the exact algorithms. As we mentioned before, our
+implementation depends on the arithmetic with integers of arbitrary precision,
+provided by gmp. This implementation approach does not seem the right choice
+21
+
+30
+
+D7
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+60
+
+80
+
+100
+
+degree
+
+50
+
+D7
+1.0
+
+avg time (s)
+
+0.8
+
+IslSturmQQ
+IslBzIntegerZZ
+IslBzBdgSturmQQ
+SlvAberthQQ
+SturmSeq
+CORE
+
+0.6
+
+0.4
+
+0.2
+
+0.0
+0
+
+20
+
+40
+degree
+
+Fig. 6. Mignotte-like polynomials with multiple roots of bit size 30 (top) and 50
+(bottom) bits.
+
+for the square-free factorization algorithms. We believe that an implementation
+based on machine arithmetic combined with modular techniques will give much
+better results.
+In some geometric problems, it is more important to have controlled approximation of the roots than to isolated them. This is the case in the following
+example where we want to draw a curve defined by an implicit equation. In this
+specific problem, the polynomial f (x, y) is of degree 43 in each variable with coefficients of bit size 50 [8]. In order to get a picture of the implicit curve in the
+box [a, b] × [c, d], we solve the univariate polynomials f (a + k (b−a)
+N , y)k=0,...,N −1
+(N = 200) and then exchange the role of x and y. The subdivision is stopped,
+when the precision of 10−4 is reached, without checking the existence and uniqueness of the roots in the computed intervals.
+Two types of solvers have been tested:
+22
+
+– The first one (SlvBzStd<double>) is a direct implementation of the Bernstein solver with double arithmetic. It produces the left part of Fig. 7. We
+see that in some regions, the solver is more sensible to numerical errors, and
+behaves almost “like a random generator of points”.
+– The second solver (SlvBzBdg<QQ>), similar to S3 , uses exact (rational) arithmetic to convert the input polynomial to its Bernstein representation. Then
+it normalises the coefficients and rounds up and down the rational numbers
+to the closest double numbers4 . Then the main subdivision loop is performed
+on double interval arithmetic, extending the sign count to this context. If all
+the interval coefficients contain 0, we recompute the representation of the
+initial polynomial (using exact rational arithmetic) and run again the rounding and subdivision steps with double arithmetic, until we get the required
+precision. This produces the right part of Fig. 7.
+
+Fig. 7. Left: Approximation using doubles. Right: Approximation using Bernstein solver and interval arithmetic.
+
+The Bernstein solver based on interval arithmetic and using this symbolicnumeric strategy can be applied efficiently (even for input polynomials with large
+coefficient size) to geometric problems, where (controlled) approximate results
+are sufficient. Its main advantage is that it exploits the performance of machine
+precision arithmetic for the main loop of the algorithm and the approximation
+properties of the Bernstein representation. Notice that the size of the problem
+is prohibitive for exact subdivision based solvers.
+
+8
+
+Current and Future Work
+
+Our experiments imply that the combination of symbolic and numeric techniques leads to very promising implementations. Along these lines, we plan to
+4
+
+For that purpose, one can use for instance the function get double of mpfr
+(http://www.mpfr.org/) with correct rounding mode.
+
+23
+
+improve the existing implementation of solvers, so that we can approximate with
+guarantees the roots of a polynomial with exact coefficients. The applications
+of Bernstein methods to polynomials with approximate coefficients is also under
+investigation. We are also extending our package in synaps so that it can handle
+computations in an extension field.
+There are a lot of open questions concerning exact algorithms for real root
+isolation. Just to mention few of them: Is there any class of polynomials, with
+few real roots, such that the Bernstein solver performs O(dτ ) subdivision steps
+eB (d4 τ 2 )
+but the Sturm solver performs only a constant number? Does the O
+holds for complex root isolation? What is the expected complexity of the exact
+subdivision solvers?
+The most important open problem for a theoretical and hopefully practical
+point of view is the following: Is there any exact (subdivision based) solver with
+eB (d3 τ ), similar to the numerical solvers?
+complexity O
+
+Acknowledgments
+All authors acknowledge partial support by IST Programme of the EU as a
+Shared-cost RTD (FET Open) Project under Contract No IST-006413-2 (ACS
+- Algorithms for Complex Shapes).
+
+References
+1. A. Akritas. An implementation of Vincent’s theorem. Numerische Mathematik,
+36:53–62, 1980.
+2. S. Basu, R. Pollack, and M-F.Roy. Algorithms in Real Algebraic Geometry, volume 10 of Algorithms and Computation in Mathematics. Springer-Verlag, 2003.
+3. M. Ben-Or, D. Kozen, and J. H. Reif. The complexity of elementary algebra and
+geometry. J. Comput. Syst. Sci., 32:251–264, 1986.
+4. E. Berberich, A. Eigenwillig, M. Hemmer, S. Hert, L. Kettner, K. Mehlhorn, J. Reichel, S. Schmitt, E. Schömer, and N. Wolpert. EXACUS: Efficient and Exact Algorithms for Curves and Surfaces. In ESA, volume 1669 of LNCS, pages 155–166.
+Springer, 2005.
+5. D. Bini. Numerical computation of polynomial zeros by means of Aberth’s method.
+Numerical Algorithms, 13(3–4):179–200, 1996.
+6. D. Bini and G. Fiorentino. Design, analysis, and implementation of a multiprecision
+polynomial rootfinder. Numerical Algorithms, pages 127–173, 2000.
+7. J. Canny. Improved algorithms for sign determination and existential quantifier
+elimination. The Computer Journal, 36(5):409–418, 1993.
+8. F. Cazals, J.-C. Faugère, M. Pouget, and F. Rouillier. The implicit structure of
+ridges of a smooth parametric surface. Technical Report 5608, INRIA, 2005.
+9. G. Collins. Subresultants and reduced polynomial remainder sequences. J. ACM,
+14:128–142, 1967.
+10. G. Collins and A. Akritas. Polynomial real root isolation using Descartes’ rule of
+signs. In SYMSAC ’76, pages 272–275, New York, USA, 1976. ACM Press.
+
+24
+
+11. G. Collins and R. Loos. Real zeros of polynomials. In B. Buchberger, G. Collins,
+and R. Loos, editors, Computer Algebra: Symbolic and Algebraic Computation,
+pages 83–94. Springer-Verlag, Wien, 2nd edition, 1982.
+12. M. Coste and M. F. Roy. Thom’s lemma, the coding of real algebraic numbers
+and the computation of the topology of semi-algebraic sets. J. Symb. Comput.,
+5(1/2):121–129, 1988.
+13. J. H. Davenport. Cylindrical algebraic decomposition. Technical Report 88–
+10, School of Mathematical Sciences, University of Bath, England, available at:
+http://www.bath.ac.uk/masjhd/, 1988.
+14. Z. Du, V. Sharma, and C. K. Yap. Amortized bound for root isolation via Sturm
+sequences. In D. Wang and L. Zhi, editors, Int. Workshop on Symbolic Numeric
+Computing, pages 81–93, School of Science, Beihang University, Beijing, China,
+2005.
+15. A. Eigenwillig, L. Kettner, W. Krandick, K. Mehlhorn, S. Schmitt, and N. Wolpert.
+A Descartes Algorithm for Polynomials with Bit-Stream Coefficients.
+In
+V. Ganzha, E. Mayr, and E. Vorozhtsov, editors, CASC, volume 3718 of LNCS,
+pages 138–149. Springer, 2005.
+16. A. Eigenwillig, V. Sharma, and C. K. Yap. Almost tight recursion tree bounds
+for the Descartes method. In ISSAC ’06: Proceedings of the 2006 International
+Symposium on Symbolic and Algebraic Computation, pages 71–78, New York, NY,
+USA, 2006. ACM Press.
+17. M. El Kahoui. An elementary approach to subresultants theory. J. Symb. Comput.,
+35(3):281–292, 2003.
+18. I. Emiris, A. Kakargias, M. Teillaud, E. Tsigaridas, and S. Pion. Towards an open
+curved kernel. In Proc. Annual ACM Symp. on Computational Geometry, pages
+438–446, New York, 2004. ACM Press.
+19. I. Emiris and E. Tsigaridas. Computing with real algebraic numbers of small
+degree. In Proc. ESA, LNCS, pages 652–663. Springer, 2004.
+20. I. Emiris and E. Tsigaridas. Real solving of bivariate polynomial systems. In
+V. Ganzha, E. Mayr, and E. Vorozhtsov, editors, Proc. Computer Algebra in Scientific Computing (CASC), LNCS, pages 150–161. Springer Verlag, 2005.
+21. I. Emiris, E. Tsigaridas, and G. Tzoumas. The predicates for the Voronoi diagram
+of ellipses. In Proc. 22th Annual ACM Symp. on Computational Geometry, pages
+227–236, Sedona, USA, 2006.
+22. I. Emiris and E. P. Tsigaridas. Computations with one and two algebraic numbers.
+Technical report, ArXiv, Dec 2005.
+23. K. Geddes, S. Czapor, and G. Labahn. Algorithms of Computer Algebra. Kluwer
+Academic Publishers, Boston, 1992.
+24. L. González-Vega, H. Lombardi, T. Recio, and M.-F. Roy. Sturm-Habicht Sequence. In ISSAC, pages 136–146, 1989.
+25. L. Guibas, M. Karavelas, and D. Russel. A computational framework for handling
+motion. In Proc. 6th Workshop Algor. Engin. & Experim. (ALENEX), pages 129–
+141, Jan 2004.
+26. L. E. Heindel. Integer arithmetic algorithms for polynomial real zero determination.
+Journal of the Association for Computing Machinery, 18(4):533–548, Oct. 1971.
+27. J. Johnson. Algorithms for polynomial real root isolation. In B. Caviness and
+J. Johnson, editors, Quantifier elimination and cylindrical algebraic decomposition,
+pages 269–299. Springer, 1998.
+28. V. Karamcheti, C. Li, I. Pechtchanski, and C. Yap. A CORE library for robust
+numeric and geometric computation. In 15th ACM Symp. on Computational Geometry, 1999.
+
+25
+
+29. W. Krandick. Isolierung reeller Nullstellen von Polynomen. In J. Herzberger,
+editor, Wissenschaftliches Rechnen, pages 105–154. Akademie-Verlag, Berlin, 1995.
+30. W. Krandick and K. Mehlhorn. New bounds for the Descartes method. JSC,
+41(1):49–66, Jan 2006.
+31. J. M. Lane and R. F. Riesenfeld. Bounds on a polynomial. BIT, 21:112–117, 1981.
+32. T. Lickteig and M.-F. Roy. Sylvester-Habicht Sequences and Fast Cauchy Index
+Computation. J. Symb. Comput., 31(3):315–341, 2001.
+33. H. Lombardi, M.-F. Roy, and M. Safey El Din. New Structure Theorem for Subresultants. J. Symb. Comput., 29(4-5):663–689, 2000.
+34. M. Mignotte. Mathematics for Computer Algebra. Springer-Verlag, 1992.
+35. M. Mignotte. On the Distance Between the Roots of a Polynomial. Appl. Algebra
+Eng. Commun. Comput., 6(6):327–332, 1995.
+36. B. Mourrain, J. P. Pavone, P. Trébuchet, and E. Tsigaridas. SYNAPS, a library
+for symbolic-numeric computation. In 8th Int. Symposium on Effective Methods in
+Algebraic Geometry, MEGA, Sardinia, Italy, May 2005. Software presentation.
+37. B. Mourrain, F. Rouillier, and M.-F. Roy. Bernstein’s basis and real root isolation,
+pages 459–478. Mathematical Sciences Research Institute Publications. Cambridge
+University Press, 2005.
+38. B. Mourrain, J. Técourt, and M. Teillaud. On the computation of an arrangement
+of quadrics in 3d. Comput. Geom., 30(2):145–164, 2005.
+39. B. Mourrain, M. Vrahatis, and J. Yakoubsohn. On the complexity of isolating real
+roots and computing with certainty the topological degree. J. Complexity, 18(2),
+2002.
+40. V. Pan. Univariate polynomials: Nearly optimal algorithms for numerical factorization and rootfinding. J. Symbolic Computation, 33(5):701–733, 2002.
+41. D. Reischert. Asymptotically fast computation of subresultants. In ISSAC, pages
+233–240, 1997.
+42. R. Rioboo. Towards faster real algebraic numbers. In Proc. ACM Intern. Symp.
+on Symbolic & Algebraic Comput., pages 221–228, Lille, France, 2002.
+43. F. Rouillier and Z. Zimmermann. Efficient isolation of polynomial’s real roots. J.
+of Computational and Applied Mathematics, 162(1):33–50, 2004.
+44. M.-F. Roy and A. Szpirglas. Complexity of the Computation on Real Algebraic
+Numbers. J. Symb. Comput., 10(1):39–52, 1990.
+45. A. Schönhage. The fundamental theorem of algebra in terms of computational
+complexity. Manuscript. Univ. of Tübingen, Germany, 1982.
+46. V. Sharma and C. Yap. Sharp Amortized Bounds for Descartes and de Casteljau’s
+Methods for Real Root Isolation. (unpublished manuscript), Oct 2005.
+47. E. P. Tsigaridas and I. Z. Emiris. Univariate polynomial real root isolation: Continued fractions revisited. In Y. Azar and T. Erlebach, editors, In Proc. 14th
+European Symposium of Algorithms (ESA), volume 4168 of LNCS, pages 817–828,
+Zurich, Switzerland, 2006. Springer Verlag.
+48. J. von zur Gathen and J. Gerhard. Fast Algorithms for Taylor Shifts and Certain
+Difference Equations. In ISSAC, pages 40–47, 1997.
+49. J. von zur Gathen and J. Gerhard. Modern Computer Algebra. Cambridge Univ.
+Press, Cambridge, U.K., 2nd edition, 2003.
+50. J. von zur Gathen and T. Lücking. Subresultants revisited. Theor. Comput. Sci.,
+1-3(297):199–239, 2003.
+51. C. Yap. Fundamental Problems of Algorithmic Algebra. Oxford University Press,
+New York, 2000.
+
+26
+
+

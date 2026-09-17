@@ -1,0 +1,6 @@
+det(A)= a*d - a - b*c + b + c - d
+abcd det(B)= -a*b*c + a*b*d + a*c*d - a*d - b*c*d + b*c
+d= (a + b*c - b - c)/(a - 1)
+after substitution: -(a - b)*(a - c)*(b - 1)*(c - 1)/(a - 1)
+a=b and c=d: 0 0
+PASS: all nonzero a,c admit the column-duplicate family; normalized cross-ratio a is continuous.

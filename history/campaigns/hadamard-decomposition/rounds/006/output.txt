@@ -1,0 +1,1 @@
+PASS: arbitrary 4-by-4 example split into two rank-at-most-3 factors.

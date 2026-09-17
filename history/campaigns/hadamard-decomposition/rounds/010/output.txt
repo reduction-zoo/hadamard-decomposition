@@ -1,0 +1,10 @@
+PASS C4 graph-sum explicit witness
+starting unrestricted triangle target oracle
+Traceback (most recent call last):
+  File "/Users/xiweipan/Codes/reduction-research/campaigns/hadamard-decomposition/rounds/010/probe.py", line 17, in <module>
+    assert target_solve(t) is None
+           ~~~~~~~~~~~~^^^
+  File "/Users/xiweipan/Codes/reduction-research/campaigns/hadamard-decomposition/work/check.py", line 81, in target_solve
+    result=solver.check(); assert result in (z3.sat,z3.unsat), result
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unknown

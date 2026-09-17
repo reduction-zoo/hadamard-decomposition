@@ -1,0 +1,6 @@
+error: unknown symbol modifier
+   ┌─ campaigns/hadamard-decomposition/work/manuscript.typ:42:19
+   │
+42 │ $ M = (U V) circle.dot (W Z), $ <hadamard>
+   │                    ^^^
+
