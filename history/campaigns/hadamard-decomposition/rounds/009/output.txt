@@ -1,0 +1,1 @@
+PASS: full-rank 3-by-3 matrix with a nonzero reference column has widths (2,2).

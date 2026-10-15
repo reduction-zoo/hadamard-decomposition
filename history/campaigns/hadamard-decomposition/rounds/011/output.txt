@@ -1,0 +1,1 @@
+PASS: three K4 components give a 30-by-12 (2,6) factorization, but items 4,4,4 cannot partition into bins 6,6.

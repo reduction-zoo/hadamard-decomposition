@@ -1,0 +1,1 @@
+PASS: diag(1,1,1,0) has a (2,2) decomposition; any completion changing only (4,4) retains the fixed I3 minor and rank >= 3.

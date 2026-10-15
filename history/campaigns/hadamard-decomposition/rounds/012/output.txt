@@ -1,0 +1,9 @@
+PASS (0, 0, 0) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (0, 0, 1) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (0, 1, 0) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (0, 1, 1) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (1, 0, 0) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (1, 0, 1) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (1, 1, 0) canonical and gauge-rescaled witnesses; selector bits recovered
+PASS (1, 1, 1) canonical and gauge-rescaled witnesses; selector bits recovered
+16 exact witness validations; 16 local selector decodings; no SAT clause gadget.

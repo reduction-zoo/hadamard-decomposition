@@ -1,0 +1,1 @@
+PASS: I4 factorization, widths 2,2; right row directions (1,0),(0,1),(1,1),(1,-1).

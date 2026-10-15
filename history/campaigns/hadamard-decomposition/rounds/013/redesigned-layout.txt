@@ -1,0 +1,476 @@
+        NP-hardness of exact Hadamard decomposition
+              with one rank bound equal to two
+
+                      Working manuscript · Awaiting independent human expert review
+                                            15 September 2026
+
+
+Abstract
+Exact Hadamard decomposition asks whether a rational matrix is the entrywise product of two real
+matrices with prescribed rank bounds. We give a deterministic polynomial-time reduction from 3-SAT,
+even when the input matrix is nonnegative integer and one rank bound is two. An identity submatrix
+forces a basis of product vectors. Additional rows synchronize two-choice selectors, and weighted rows
+around a cycle encode an exact subset-product equation. The converse holds for arbitrary real factors,
+without sign restrictions. A determinant predicate recovers a satisfying assignment from every valid
+decomposition. For witnesses encoded over a common real algebraic primitive element, a subresultant
+and Sturm procedure implements recovery in polynomial bit time. The construction addresses an
+explicitly stated complexity question; its novelty is supported within the literature coverage described
+here and remains subject to expert assessment.
+
+1. Introduction
+Hadamard decomposition represents a matrix by multiplying low-rank matrices entrywise. It can
+represent a matrix of rank equal to the product of the factor ranks. This expressive capacity motivates
+its use as a multiplicative model for matrix compression. Ciaperoni, Gionis and Mannila introduced a
+data-analysis formulation, placed exact real feasibility in the existential theory of the reals, and left its
+formal computational complexity open [1].
+Subsequent work developed alternating and manifold-based numerical algorithms [2], [3]. The product-
+vector interpretation is also known: rank-one reshapes of row factors recover the Hadamard represen­
+tation [3]. These algorithms and reformulations do not decide exact feasibility for all rational inputs. Our
+contribution is a reduction that forces discrete choices within the unrestricted real factorization model.
+For a rational matrix 𝑀 ∈ ℚ 𝜇×𝑁 and positive integer bounds 𝑝, 𝑞 ≤ min(𝜇, 𝑁 ), define exact Hadamard
+feasibility by
+                                          𝑀 = (𝑈 𝑉 ) ⊙ (𝑊 𝑍),                                            (1)
+
+where 𝑈 ∈ ℝ𝜇×𝑝 , 𝑉 ∈ ℝ𝑝×𝑁 , 𝑊 ∈ ℝ𝜇×𝑞 and 𝑍 ∈ ℝ𝑞×𝑁 . The symbol ⊙ denotes entrywise multipli­
+cation. Factor entries may have arbitrary signs; the two ordinary products have ranks at most their
+respective bounds.
+Theorem 1 (Main result). Exact Hadamard feasibility is NP-hard under deterministic polynomial-
+time many-one reductions, even for nonnegative integer matrices with 𝑝 = 2. More precisely, a 3-SAT
+formula with 𝑛 occurring variables and 𝑚 clauses maps to an instance with
+
+                   𝐾 = max(3, 2𝑛 + 2𝑚),         𝜇 = 𝐾 2 + 9𝐾,      𝑁 = 4𝐾,     𝑞 = 2𝐾.                   (2)
+
+The formula is satisfiable if and only if this instance is feasible. Every valid real decomposition deter­
+mines a satisfying assignment by explicit determinant zero tests. On the common-primitive algebraic
+witness encoding defined in Section 6, these tests give a deterministic algorithm polynomial in the
+formula length plus the supplied witness length.
+The source reduction uses the standard many-one framework [4]. A prime-exponent encoding first
+expresses satisfaction as subset product. The new matrix construction then makes each item correspond
+to one of two orientations of a product-vector selector. Calibration retains a nonzero continuous
+parameter at each selector. A cycle of weighted rows makes the product of the selected items equal
+
+                                                     1
+a prescribed target. The second rank bound grows with the source instance; the theorem does not fix
+both bounds.
+
+2. From 3-SAT to subset product
+Let 𝐹 be a conjunction of 𝑚 clauses, each containing three literals. Repeated literals are allowed. Number
+the occurring variables consecutively from 1 to 𝑛; the empty conjunction has 𝑛 = 0. Renaming the
+occurring variables of an ordinary 3-SAT formula is polynomial-time. This convention also ensures that
+the assignment length is bounded by the source encoding length.
+Choose distinct primes 𝜋𝑖 for variables and 𝜅𝑗 for clauses. For each variable 𝑖 and truth value 𝑏, let 𝑐𝑖,𝑏,𝑗
+be the number of occurrences in clause 𝑗 made true by that value. Create two assignment items per
+variable and two slack items per clause:
+                                                    𝑚
+                                                         𝑐
+                                     𝑟(𝑖, 𝑏) = 𝜋𝑖 ∏ 𝜅𝑗𝑖,𝑏,𝑗 ,      𝜅𝑗 ,   𝜅2𝑗 .                          (3)
+                                                   𝑗=1
+
+The required product is
+                                                   𝑛         𝑚
+                                         𝑇 = (∏ 𝜋𝑖 )(∏ 𝜅4𝑗 ).                                            (4)
+                                                  𝑖=1        𝑗=1
+
+Order the assignment items by variable, with the true item before the false item, followed by the clause
+slack pairs. Append ones if needed to obtain 𝐾 ≥ 3 items, indexed 𝑟0 , …, 𝑟𝐾−1 .
+Lemma 1 (Prime encoding). A subset of these items has product 𝑇 if and only if 𝐹 is satisfiable.
+Reading the selected assignment items recovers a satisfying assignment from every exact-product
+subset.
+Proof. The exponent of 𝜋𝑖 forces exactly one of variable 𝑖’s assignment items. Its selected truth value
+determines how many literals of each clause are true. For clause 𝑗, let this count be 𝑐𝑗 , between zero
+and three. Its two slack items can add exponent zero, one, two or three. The required exponent four is
+reachable exactly when 𝑐𝑗 ≥ 1. This proves both implications, including repeated literals. Padding by
+ones changes no exponent. For the empty formula, 𝑇 = 1, and the empty subset is feasible.            □
+
+3. Matrix construction
+We now take any positive integers 𝑟0 , …, 𝑟𝐾−1 , 𝑇 with 𝐾 ≥ 3. For each item 𝑖, reserve four column
+indices 𝐿𝑖 , 𝑅𝑖 , 𝑋𝑖 , 𝑌𝑖 , in that order. Let 𝑒𝐽 denote the unit row vector at index 𝐽 in ℝ4𝐾 . The matrix
+begins with the identity 𝐼4𝐾 . The remaining rows are prescribed coefficient vectors relative to these
+indices.
+First add 𝑒𝐿𝑖 + 𝑒𝐿𝑗 for every 𝑖 < 𝑗, then the corresponding 𝑅 rows. For each 𝑖, add the four rows pairing
+either 𝑋𝑖 or 𝑌𝑖 with either 𝐿𝑖 or 𝑅𝑖 . Next add one calibration row per item:
+                                        𝐶𝑖 = 𝑒𝐿𝑖 + 𝑒𝑅𝑖 + 𝑒𝑋𝑖 + 𝑒𝑌𝑖 .                                     (5)
+
+Finally add one cycle row per item. A cycle row has only two nonzero blocks, each of length four. Row
+𝑖 uses
+                          (1, 𝑟𝑖 , 1, 𝑟𝑖 ) in block 𝑖,   (1, 1, 1, 1) in block 𝑖 + 1                     (6)
+
+when 0 ≤ 𝑖 < 𝐾 − 1. The last row instead uses
+
+                   (1, 𝑟𝐾−1 , 1, 𝑟𝐾−1 ) in block 𝐾 − 1, (1, 𝑇 2 , 𝑇 , 𝑇 ) in block 0.                    (7)
+
+All omitted entries are zero. Every zero is a prescribed value, not a missing entry. The output bounds
+are 𝑝 = 2 and 𝑞 = 2𝐾.
+
+
+
+                                                         2
+The row counts, in construction order, are 4𝐾, 𝐾(𝐾 − 1), 4𝐾, 𝐾 and 𝐾. They give Equation 2. The
+two blocks of every cycle row are distinct because 𝐾 ≥ 3. All entries are nonnegative integers.
+Figure 1 shows the support of a complete, exactly verified factorization for a one-clause formula. The
+five row families remain visible in the target matrix.
+               𝑈𝑉                           𝑊𝑍                            𝑀
+
+
+                                                                                          Identity · 16 rows
+
+
+
+
+                                                                                          Anchor pairs · 12
+
+                              ⊙                             =
+
+                                                                                          Neighbors · 16
+
+
+
+                                                                                          Calibration · 4
+                                                                                          Cycle · 4
+             rank = 2                     rank = 8                      52 × 16
+
+
+
+                                                     Nonzero entry
+
+
+                                                        Zero entry
+Figure 1: An actual constructed instance for 𝐹 = (𝑥1 ∨ 𝑥1 ∨ 𝑥1 ), with 𝐾 = 4. Black cells indicate nonzero entries; these
+are support plots, not plots of entry magnitudes. The rational factors satisfy every entry of (𝑈 𝑉 ) ⊙ (𝑊 𝑍) = 𝑀 exactly.
+Heavy vertical lines separate the four selector blocks; horizontal lines separate the five row families. The matrix-based
+presentation follows the visual convention of Figures 1 and 3 in [1].
+
+4. Structure forced by a feasible decomposition
+4.1. Saturation and pair sums
+A nonzero tensor 𝑎 ⊗ 𝑏 is called a product vector. Under the usual coordinate identification, it is a rank-
+one matrix. In a decomposition satisfying Equation 1, associate the product vector 𝑢𝐴 ⊗ 𝑤𝐴 to row
+𝐴, and 𝑣𝐽 ⊗ 𝜁𝐽 to column 𝐽 . Their pairing is 𝑀𝐴,𝐽 . Here 𝑢𝐴 , 𝑤𝐴 are rows of 𝑈 , 𝑊 , while 𝑣𝐽 , 𝜁𝐽 are
+columns of 𝑉 , 𝑍.
+Lemma 2 (Saturation). The first 𝑁 = 4𝐾 row product vectors form a basis of ℝ2 ⊗ ℝ2𝐾 , and the
+column product vectors form its dual basis. A later row with coefficients (𝑎𝐽 )𝐽 has product vector
+∑𝐽 𝑎𝐽 𝑧𝐽 , where 𝑧𝐽 denotes the basis vector belonging to identity row 𝐽 .
+Proof. The leading identity gives a nonsingular pairing matrix of size 𝑁 . The ambient tensor space
+has dimension exactly 𝑁 . Both families are therefore bases and are dual. Pairing a later row with every
+dual basis vector determines each of its coordinates. This forces its entire product vector, not just a
+projection. Lower actual factor ranks cannot evade the argument, since the identity already requires
+the full ambient dimension.                                                                           □
+For two independent product vectors, their sum is a product vector exactly when they share a left or
+a right factor line. If both pairs of factors were independent, linear functionals on their spans would
+map the sum to a 2 × 2 identity matrix, contradicting rank one. The converse follows by distributing
+the tensor product.
+
+
+                                                            3
+Three or more independent product vectors with product-vector pairwise sums must share one factor
+line. To see this, fix two that share a left line and have distinct right lines. A third vector without that
+left line would have to share both distinct right lines, which is impossible. Thus it has the common left
+line. The argument with left and right exchanged is identical.
+
+4.2. Synchronized selectors
+Lemma 3 (Two orientations). In every feasible decomposition, there are independent left vectors 𝛼, 𝛽
+and a basis 𝑏0 , 𝑐0 , …, 𝑏𝐾−1 , 𝑐𝐾−1 of ℝ2𝐾 such that
+                                       𝑧𝐿𝑖 = 𝛼 ⊗ 𝑏𝑖 ,       𝑧𝑅𝑖 = 𝛽 ⊗ 𝑐𝑖 .                               (8)
+
+For each 𝑖, exactly one of the following orientations holds, with a nonzero real scalar 𝑡𝑖 :
+
+                                 Selected: 𝑧𝑋𝑖 = 𝑡𝑖 𝛼 ⊗ 𝑐𝑖 , 𝑧𝑌𝑖 = 𝑡−1
+                                                                    𝑖 𝛽 ⊗ 𝑏𝑖 ,
+                                                                                                         (9)
+                            Unselected: 𝑧𝑋𝑖 = 𝑡𝑖 𝛽 ⊗ 𝑏𝑖 ,            𝑧𝑌𝑖 = 𝑡−1
+                                                                            𝑖 𝛼 ⊗ 𝑐𝑖 .
+
+Proof. The pair-sum rows on the 𝐿 indices force a common factor line. A common right line would
+confine 𝐾 ≥ 3 independent vectors to a two-dimensional space. They therefore share a left line 𝛼. The
+𝑅 indices likewise share a left line 𝛽.
+These two lines are distinct. Otherwise each pair 𝑧𝐿𝑖 , 𝑧𝑅𝑖 would have the same left line and independent
+right factors. Its two common neighbors would be forced onto that left line as well. All 4𝐾 basis vectors
+would then lie in a space of dimension 2𝐾, a contradiction. Write the anchor vectors as in the statement.
+Within each block, 𝑏𝑖 and 𝑐𝑖 are independent. If they were proportional, every common neighbor
+would have that right line: it cannot share both independent left lines. The four vectors would lie in a
+two-dimensional space. With both pairs of factor lines distinct, a common neighbor must occupy an off-
+diagonal tensor position. The two neighbors occupy opposite positions because they are independent.
+Initially write their nonzero multipliers as 𝑡𝑖 , 𝑠𝑖 .
+All right vectors across blocks are independent. A proper span of the 2𝐾 right vectors would make
+the span of the 4𝐾 basis vectors smaller than 4𝐾. This proves the global independence needed for
+composition. In either orientation, the calibration row has determinant 1 − 𝑠𝑖 𝑡𝑖 in the local 2 × 2
+coordinates. Its decomposability forces 𝑠𝑖 𝑡𝑖 = 1, proving Equation 9.                            □
+
+5. Cycle equivalence and completeness
+Let 𝜀𝑖 be one for the selected orientation and zero otherwise. For block coefficients (𝑎, 𝑏, 𝑐, 𝑑) at indices
+(𝐿𝑖 , 𝑅𝑖 , 𝑋𝑖 , 𝑌𝑖 ), the local coordinate matrices supplied by Lemma 3 are
+
+                           𝑎 𝑐𝑡𝑖                             𝑎 𝑡𝑑
+                          (𝑑     ) (selected),          (        𝑖 ) (unselected).                      (10)
+                           𝑡  𝑏                             𝑐𝑡𝑖 𝑏
+                             𝑖
+
+
+
+Define ℎ𝑖 = 𝑡1 in the selected orientation and ℎ𝑖 = 𝑡𝑖 otherwise. Each pattern in Equation 5, Equation 6
+             𝑖
+and Equation 7 satisfies 𝑎𝑏 = 𝑐𝑑 and has no zero entries. Its local block has rank one. The ratio of its
+second row to its first is
+                                              (1, 1, 1, 1) ↦ ℎ𝑖 ,
+                                                                 𝜀
+                                            (1, 𝑟𝑖 , 1, 𝑟𝑖 ) ↦ 𝑟𝑖 𝑖 ℎ𝑖 ,                                (11)
+                                                2
+                                           (1, 𝑇 , 𝑇 , 𝑇 ) ↦ 𝑇 ℎ𝑖 .
+
+These formulas follow directly from the first column of Equation 10.
+Lemma 4 (Product cycle). The constructed matrix has a real Hadamard decomposition at widths
+(2, 2𝐾) if and only if a subset of the item integers has product 𝑇 .
+
+
+
+
+                                                        4
+Proof. Suppose a decomposition exists. By the global right-basis independence in Lemma 3, a cycle row
+has rank one only when its two nonzero blocks have the same left line. Applying Equation 11 gives
+                                                 𝜀                                                     𝜀
+                                  ℎ𝑖+1 = 𝑟𝑖 𝑖 ℎ𝑖          (0 ≤ 𝑖 < 𝐾 − 1),                𝑇 ℎ0 = 𝑟𝐾−1
+                                                                                                   𝐾−1
+                                                                                                       ℎ𝐾−1 .                             (12)
+
+Every ℎ𝑖 is nonzero. Multiplying these equations and cancelling gives
+                                                                  𝐾−1
+                                                                             𝜀
+                                                                  ∏ 𝑟𝑖 𝑖 = 𝑇 .                                                            (13)
+                                                                  𝑖=0
+
+No positivity of a factor or of 𝑡𝑖 has been assumed.
+Conversely, suppose a subset satisfies Equation 13. Use the two standard left basis vectors for 𝛼, 𝛽
+and the standard right basis for all 𝑏𝑖 , 𝑐𝑖 . Set ℎ0 = 1 and compute the successive ℎ𝑖 from Equation 12.
+Set 𝑡𝑖 = ℎ1 for a selected item and 𝑡𝑖 = ℎ𝑖 otherwise. The four vectors of each block in Lemma 3 are a
+           𝑖
+scaled permutation of the standard tensor basis. Their dual basis also consists of product vectors.
+Use this basis for the identity rows and its dual for the columns. Anchor and neighbor rows are product
+vectors because their summands share a factor. Calibration rows have zero local determinant. The cycle
+rows have equal left-line ratios by Equation 12, including the last row by the subset-product premise.
+Each resulting rank-one coordinate matrix factors into a left and a right vector. These provide 𝑈 , 𝑊 row
+by row, while the product duals provide 𝑉 , 𝑍 column by column. Their pairings equal every prescribed
+entry of 𝑀 . All constructed coordinates are rational.                                                  □
+The cycle-row submatrix is shown in Figure 2. Lemma 1 followed by Lemma 4 proves the YES/NO
+equivalence in Theorem 1.
+                Block 0                    Block 1                     Block 2                   Block 3            Rank-one constraint
+               𝐿0 𝑅0 𝑋0 𝑌0                𝐿1 𝑅1 𝑋1 𝑌1                 𝐿2 𝑅2 𝑋2 𝑌2               𝐿3 𝑅3 𝑋3 𝑌3
+                                                                                                                              𝜀
+    0      1     𝑟0   1      𝑟0       1     1        1   1                       0                     0                ℎ1 = 𝑟00 ℎ0
+
+                                                                                                                              𝜀
+    1                 0               1     𝑟1       1   𝑟1       1     1        1   1                 0                ℎ2 = 𝑟11 ℎ1
+
+                                                                                                                              𝜀
+    2                 0                              0            1     𝑟2       1   𝑟2     1     1    1      1         ℎ3 = 𝑟22 ℎ2
+
+                                                                                                                               𝜀
+    3      1 𝑇2 𝑇            𝑇                       0                           0          1     𝑟3   1      𝑟3       𝑇 ℎ0 = 𝑟33 ℎ3
+
+
+                                                                                                              𝜀
+                                  Outgoing block              Incoming / closing block           ⇒ ∏3𝑖=0 𝑟𝑖 𝑖 = 𝑇
+Figure 2: The cycle-row submatrix for 𝐾 = 4, with the same block order as Figure 1. Each white block labeled zero
+is entirely zero. An outgoing block and its incoming block must have the same left-factor line, giving the equation at
+the right. The last row couples block 3 back to block 0 with the prescribed target 𝑇 . Multiplying the four equations
+eliminates the nonzero ratios ℎ𝑖 . The same pattern extends to every 𝐾 ≥ 3; the coefficients here are symbolic.
+
+6. Witness recovery and bit complexity
+6.1. Recovery from arbitrary valid factors
+The first row of 𝑈 belongs to identity index 𝐿0 . For each assignment item 𝑖, compute the determinant of
+its left-factor rows at 𝐿0 and 𝑋𝑖 . By Lemma 3, this determinant is zero exactly when item 𝑖 is selected:
+
+                                                                            𝑢𝐿0 ,1 𝑢𝐿0 ,2
+                                                 𝜀𝑖 = 1 ⇔ det(                            ) = 0.                                          (14)
+                                                                            𝑢𝑋𝑖 ,1 𝑢𝑋𝑖 ,2
+
+This predicate is invariant under invertible changes of left coordinates and nonzero row gauges. It
+therefore applies to every valid real decomposition, not only to the witnesses constructed in Lemma
+4. Read the first 2𝑛 item bits and assign variable 𝑖 true exactly when its true item is selected. Lemma
+1 guarantees that exactly one item in each pair is selected and that the recovered assignment satisfies
+every clause.
+
+                                                                             5
+6.2. The encoded zero test
+For executable recovery, encode all factor entries in one real algebraic primitive element 𝜃. The witness
+supplies a nonzero integer polynomial 𝑃 and rational non-root endpoints 𝑎 < 𝑏 whose interval contains
+exactly one distinct real root 𝜃 of 𝑃 . Each factor entry is a dense rational coordinate polynomial
+evaluated at 𝜃. The polynomial 𝑃 may be reducible or have repeated roots. All degrees and coefficients
+are written explicitly. Rational numerators and denominators are integer literals; compressed exponents
+and symbolic expressions are excluded.
+For the determinant polynomial 𝐷 in Equation 14, use the equivalence
+                            𝐷(𝜃) = 0 ⇔ gcd(𝑃 , 𝐷) has a root in (𝑎, 𝑏).                             (15)
+
+Every root of the gcd is a root of 𝑃 , so the isolating premise makes the right-hand root count zero or
+one. A zero determinant gives gcd(𝑃 , 0) = 𝑃 ; a constant gcd has no root. This handles localization to
+an irreducible factor without factoring 𝑃 or constructing another number field.
+The executable computes the gcd up to scale as the last nonzero subresultant. For root counting, it
+clears denominators, takes the primitive integer part, and removes repeated factors using the gcd with
+the derivative. It then computes the sign-corrected subresultant Sturm sequence. Subtracting its sign-
+variation count at 𝑏 from that at 𝑎, omitting zero evaluations, gives the required root count. These are
+standard exact polynomial operations [5]. The implementation uses SymPy’s Poly.subresultants and
+sturm_amv(method=1) the latter computes sign-corrected subresultants as described in Section 2.4.3 of
+[6]. No feasibility solver runs inside either reduction map.
+
+6.3. Bounds for both maps
+Let ℓ be the source bit length and set 𝑆 = 𝑛 + 𝑚 + 2. The first 𝑛 + 𝑚 primes have magnitude
+𝑂(𝑆 log 𝑆) by the classical explicit prime bounds [7]. Trial division generates them in polynomial time.
+The total number of literal occurrences is 3𝑚, so each item, 𝑇 , and 𝑇 2 has 𝑂(𝑆 log 𝑆) bits. The dense
+target consequently has
+
+                               𝑂(𝑆 3 ) entries and 𝑂(𝑆 4 log 𝑆) bits.                               (16)
+
+This is a loose encoding bound that charges the longest entry at every position. Schoolbook arithmetic
+and serialization give conservative bounds
+
+                 𝑂((ℓ + 2)8 ) forward bit operations,      𝑂((ℓ + 2)5 ) output bits.                (17)
+
+The rational witnesses in Lemma 4 also have polynomial encoding length: every ℎ𝑖 is an item subprod­
+uct, with at most 𝑂(𝑆 2 log 𝑆) bits under a loose bound. This statement concerns the constructed YES
+family only.
+Let 𝐻 be the total serialized algebraic witness length and put 𝐵 = 𝐻 + 2. Literal rational parsing and
+dense coordinate encoding ensure that degrees and input coefficient heights are at most 𝐵. Each deter­
+minant has degree 𝑂(𝐵) and, after clearing denominators, coefficient height 𝑂(𝐵2 ). A subresultant
+coefficient is a determinant of a Sylvester submatrix of order 𝑂(𝐵), giving height 𝑂(𝐵3 ) for the
+normalized gcd. The square-free part retains this polynomial height; its sign-corrected subresultants
+have height 𝑂(𝐵4 ). The subresultant size bounds underlying these steps are standard; see Theorems
+2.1–2.4 of [5].
+The controlled remainder procedure has 𝑂(𝐵3 ) rational coefficient operations per sequence. Allowing
+𝑂(𝐵8 ) bits per intermediate numerator or denominator conservatively covers polynomial divisions
+on these bounded-degree, bounded-height inputs. Schoolbook rational arithmetic, normalization and
+endpoint evaluation therefore fit within 𝑂(𝐵24 ) bit operations per determinant. This deliberately loose
+bound applies to the subresultant procedure actually called. With 2𝑛 determinant queries and one field
+check, recovery takes
+
+                                𝑂((ℓ + 1)(𝐻 + 2)24 ) bit operations                                 (18)
+
+
+                                                   6
+and outputs 𝑂(ℓ + 1) bits. No bound polynomial in the formula length alone is assumed for an arbitrary
+supplied witness.
+The converse in Lemma 4 and the predicate in Equation 14 hold over all real factors. The executable
+guarantee concerns the finite algebraic encoding just defined. Since the feasibility equations have
+rational coefficients, a nonempty real solution set has a real-algebraic point by real closed field transfer.
+This fact does not assert polynomial witness length for the unrestricted problem.
+Malformed source encodings map outside the target language. The canonical occurring-variable repre­
+sentation is polynomially obtainable from ordinary 3-SAT. Together, the construction, equivalence,
+recovery and bounds prove Theorem 1.
+
+7. Relation to previous work and limits
+The target is the factor-width formulation of Ciaperoni, Gionis and Mannila, Equation (4) of [1], with
+exact feasibility discussed in their Section 4.3 and the complexity question in Section 9. Our input
+matrices are integer and nonnegative; all factor variables remain unrestricted real. This distinction
+matters because imposing extra factor conditions changes the decision problem.
+Identity factorizations and tensor-product representations are prior ingredients. Wertz, Vandaele and
+Gillis give an identity construction in Appendix B, Lemma 2 of [2]. Gillis and coauthors give a face-
+splitting and rank-one reshape formulation in Lemmas 2.3–2.4 of [3]. The contribution here is the
+synchronization of all selector blocks, calibration of their residual scales, and the multiplicative cycle.
+Low-rank matrix signing and entrywise power factorization have their own hardness results [8]. In
+particular, Theorem 2.2 of that paper establishes hardness for prescribed magnitudes of a single factor.
+Two independent Hadamard factors admit additional magnitude freedom, so that theorem alone does
+not establish the present result. Generic identifiability of Hadamard–Hitchcock tensor decompositions
+[9] likewise does not decide exact feasibility of every matrix.
+Primary-literature searches through 15 September 2026 found no matching hardness theorem for this
+unrestricted real two-factor model. Coverage included the papers above, Hadamard factorization aliases,
+subset product, product bases and generic Hadamard-rank results. Unindexed manuscripts, exhaustive
+citation closure and overlooked implications of general representation theorems remain outside that
+coverage. The claimed new construction requires independent human assessment of correctness and
+novelty.
+
+8. Conclusion
+Synchronized product-vector selectors convert exact subset product into Hadamard feasibility at widths
+2 and 2𝐾. Their cycle gives a Karp reduction from 3-SAT, and their left-factor directions provide witness
+recovery for arbitrary valid factors. The result identifies a hardness boundary with one rank bound
+fixed. It does not establish strong NP-hardness, approximation hardness, membership of the unrestricted
+problem in NP, or completeness for the existential theory of the reals.
+
+Bibliography
+[1] M. Ciaperoni, A. Gionis, and H. Mannila, “The Hadamard decomposition problem,” Data Mining
+    and Knowledge Discovery, vol. 38, pp. 2306–2347, 2024, doi: 10.1007/s10618-024-01033-y.
+[2] S. Wertz, A. Vandaele, and N. Gillis, “Efficient algorithms for the Hadamard decomposition,” arXiv
+    preprint arXiv:2504.13633, 2025, [Online]. Available: https://arxiv.org/abs/2504.13633v2
+[3] N. Gillis, S. Saha, S. Sicilia, and A. Vandaele, “Manifold-based Algorithms for the Hadamard
+    Decomposition,” arXiv preprint arXiv:2605.28980, 2026, [Online]. Available: https://arxiv.org/abs/
+    2605.28980v1
+[4] R. M. Karp, “Reducibility among Combinatorial Problems,” in Complexity of Computer Computa­
+    tions, Plenum Press, 1972, pp. 85–103. doi: 10.1007/978-1-4684-2001-2_9.
+
+
+
+
+                                                     7
+[5] I. Z. Emiris, B. Mourrain, and E. P. Tsigaridas, “Real Algebraic Numbers: Complexity
+    Analysis and Experimentation,” in Reliable Implementation of Real Number Algorithms: Theory
+    and Practice, in Lecture Notes in Computer Science 5045., Springer, 2008, pp. 57–82. doi:
+    10.1007/978-3-540-85521-7_4.
+[6] A. Akritas, “Anna Johnson and Her Seminal Theorem of 1917,” Computer Tools in Education, no. 2,
+    pp. 13–35, 2016, [Online]. Available: https://faculty.e-ce.uth.gr/akritas/publications/100.pdf
+[7] J. B. Rosser and L. Schoenfeld, “Approximate formulas for some functions of prime numbers,” Illinois
+    Journal of Mathematics, vol. 6, no. 1, pp. 64–94, 1962, doi: 10.1215/ijm/1255631807.
+[8] N. Gillis, S. Saha, S. Sicilia, and A. Vandaele, “On the Complexity of Low-Rank Matrix Signing and
+    Entrywise Power Matrix Factorization,” arXiv preprint arXiv:2607.04875, 2026, [Online]. Available:
+    https://arxiv.org/abs/2607.04875v2
+[9] A. Oneto and N. Vannieuwenhoven, “Hadamard-Hitchcock decompositions: identifiability and
+    computation,” arXiv preprint arXiv:2308.06597, 2025, [Online]. Available: https://arxiv.org/abs/2308.
+    06597v2
+
+
+
+
+                                                   8
+A. Verification and reproducibility
+A.1. Evidence and its scope
+The implementation was checked with Python 3.14.7, SymPy 1.14.0 and Z3 5.1.0. The manuscript uses Typst
+0.15.1. The prepared suite tests six source formulas and performs eight recovery calls. A separately imple­
+mented verifier tests 29 distinct formulas, including 27 YES and two NO instances, and performs 109 recovery
+calls. Nine of these calls use algebraic gauges, including negative roots, cubic roots and reducible defining
+polynomials. Four focused calls reuse an existing source formula; they are not extra distinct instances. The
+generated cases use seed 13013 and two through four occurring variables. The largest tested target has 682
+rows and 88 columns, with widths 2 and 44.
+The verifier runs the actual candidate in fresh processes. It enumerates source assignments and validates
+the actual matrix against the constructed family before solving its subset-product coefficients by exact
+meet-in-the-middle enumeration. It independently builds target factors, checks every matrix entry, invokes
+recovery, and checks the returned assignment directly. Variants include non-diagonal coordinate changes,
+right-coordinate mixing, and signed row and column gauges.
+The prepared target oracle instead uses Z3 Boolean-controlled linear prefix equations. Its 32 standalone three-
+item checks agree with exhaustive subset enumeration, with 16 YES and 16 NO cases. A separate 38-case
+arithmetic check compares sign-corrected subresultant root counts with a rational Sturm implementation.
+Scientific notation is rejected before coefficient or endpoint conversion. The defining quartic real-factor
+oracle is retained for tiny target examples; an unknown outcome is an error.
+Both structural target NO oracles depend on Lemmas 2–4. Their finite agreement cannot establish those
+lemmas. A separate reviewer inspected the general proof and constructed further checks without importing
+the candidate. These included an unrestricted local real escape query, exact symbolic cycle identities, and full
+witnesses using repeated, reducible defining polynomials and higher-degree coordinate perturbations. The
+final review found no remaining repair requirement. This agent review and the finite checks do not replace
+independent human expert verification.
+
+A.2. Files and commands
+All paths below are relative to the repository root. The candidate and contract are in campaigns/
+hadamard-decomposition/work/. The files algorithm.py, proof.md, contract.md, preparation.md and
+verification.md describe the rule and its checks. Current raw outputs are in campaigns/hadamard-
+decomposition/rounds/013/: literal-rational-prepared-check.txt, literal-rational-check.txt,
+structural-oracle-check.txt and arithmetic-check.txt. The final review is campaigns/hadamard-
+decomposition/reviews/literal-rational/review.md. Earlier evidence remains with its owning round or
+review.
+From the repository root, run:
+
+  cd campaigns/hadamard-decomposition/work
+  python3 check.py --self-test
+  python3 check.py --oracle product-basis --candidate algorithm.py
+  python3 verify.py --candidate algorithm.py
+  typst compile manuscript.typ manuscript.pdf
+
+
+The two candidate suites execute both maps. There are no configured solver, subprocess or campaign
+timeouts. The finite input domains are declared in cases.json and verify.py. To run the maps on supplied
+inputs:
+
+  python3 algorithm.py < source.json > target.json
+  python3 algorithm.py --extract < request.json > assignment.json
+
+
+Here source.json is a formula with keys n and clauses. The second input has keys source and
+target_solution. Its target solution uses the four factor matrices plus field, exactly as specified in
+contract.md. Each coordinate is a dense list of literal rational coefficients. These two command modes share
+no process state.
+
+                                                       9
+

@@ -1,0 +1,9 @@
+error: unknown variable: iff
+    ┌─ campaigns/hadamard-decomposition/work/manuscript.typ:296:14
+    │
+296 │ $ epsilon_i=1 iff det mat(u_(L_0);u_(X_i))=0. $ <decode>
+    │               ^^^
+    │
+    = hint: if you meant to display multiple letters as is, try adding spaces between each letter: `i f f`
+    = hint: or if you meant to display this as text, try placing it in quotes: `"iff"`
+
